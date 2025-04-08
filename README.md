@@ -1,36 +1,105 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Administrador de Comedor Universitario
 
-## Getting Started
+Panel administrativo para la gestión de un comedor universitario, desarrollado con Next.js, TypeScript, Tailwind CSS, Zustand y React Hook Form.
 
-First, run the development server:
+## Características
+
+- Autenticación y gestión de usuarios
+- Gestión de carreras universitarias
+- Administración de platos y menús
+- Sistema de calificaciones y comentarios
+- Interfaz moderna con Tailwind CSS
+- Gestión de estado global con Zustand
+- Validación de formularios con React Hook Form y Zod
+
+## Requisitos previos
+
+- Node.js 18 o superior
+- Backend API (debe estar corriendo en http://localhost:3000)
+
+## Instalación
+
+1. Clona el repositorio:
+
+```bash
+git clone https://github.com/tu-usuario/administrador-comedor.git
+cd administrador-comedor
+```
+
+2. Instala las dependencias:
+
+```bash
+npm install
+```
+
+3. Crea un archivo `.env.local` en la raíz del proyecto y agrega:
+
+```
+NEXT_PUBLIC_API_URL=http://localhost:3000
+```
+
+## Desarrollo
+
+Para iniciar el servidor de desarrollo:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+La aplicación estará disponible en: [http://localhost:3001](http://localhost:3001)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Construcción para producción
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Para construir la aplicación para producción:
 
-## Learn More
+```bash
+npm run build
+```
 
-To learn more about Next.js, take a look at the following resources:
+Para iniciar la versión de producción:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm start
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Estructura de carpetas
 
-## Deploy on Vercel
+```
+/app                   # Carpetas y páginas de la aplicación (App Router de Next.js)
+  /login               # Página de login
+  /register            # Página de registro de usuarios
+  /dashboard           # Panel principal
+  /users               # Gestión de usuarios
+  /carriers            # Gestión de carreras
+  /dishes              # Gestión de platos
+  /menus               # Gestión de menús
+  /comments/[dishId]   # Comentarios de un plato específico
+  /ratings/[dishId]    # Calificaciones de un plato específico
+  layout.tsx           # Diseño principal de la aplicación
+/components            # Componentes reutilizables
+  Navbar.tsx           # Barra de navegación
+  Forms.tsx            # Componentes de formularios
+  Tables.tsx           # Tablas para visualización de datos
+  ImageUploader.tsx    # Componente para subir imágenes
+  Modals.tsx           # Componentes de modales
+/context               # Estado global con Zustand
+  AuthContext.tsx      # Contexto de autenticación
+/lib                   # Utilidades y funciones auxiliares
+  api.ts               # Configuración de Axios para llamadas a la API
+/middleware.ts         # Middleware para protección de rutas
+/public                # Archivos estáticos
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Tecnologías utilizadas
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [Next.js](https://nextjs.org/) - Framework de React
+- [TypeScript](https://www.typescriptlang.org/) - Superset tipado de JavaScript
+- [Tailwind CSS](https://tailwindcss.com/) - Framework CSS utilitario
+- [Zustand](https://github.com/pmndrs/zustand) - Biblioteca de gestión de estado
+- [React Hook Form](https://react-hook-form.com/) - Manejo de formularios
+- [Zod](https://github.com/colinhacks/zod) - Validación de esquemas
+- [Axios](https://axios-http.com/) - Cliente HTTP
+
+## Licencia
+
+Este proyecto está licenciado bajo la Licencia MIT.
