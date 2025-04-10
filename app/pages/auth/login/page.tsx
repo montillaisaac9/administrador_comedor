@@ -6,10 +6,12 @@ import { Eye, EyeOff } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import Link from 'next/link'; // Importa Link para navegación
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { login } from '@/app/service/auth.service';
 import type { IResponse } from '@/app/types/response';
 import type { IUser } from '@/app/types/auth';
+import useUserStore from '@/app/stores/useUserStore';
 
 // Define schema for form validation
 const loginSchema = z.object({
@@ -28,36 +30,37 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
+  const router = useRouter();
 
-  // Initialize react-hook-form with zod resolver
+  // Usa el store para guardar la información completa del usuario
+  const setUser = useUserStore((state) => state.setUser);
+  // Si obtienes token en la respuesta, puedes usar setUserAndToken
+  
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: '',
-      password: '',
-    },
+    defaultValues: { email: '', password: '' },
   });
 
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
-  };
+  const togglePasswordVisibility = () => setShowPassword(!showPassword);
 
   const onSubmit = async (data: LoginFormData) => {
     try {
       const response: IResponse<IUser> = await login(data);
       if (response.success && response.data) {
         alert(`Login exitoso, bienvenido ${response.data.name}`);
-        // Aquí puedes redirigir al usuario a otra ruta, por ejemplo:
-        // router.push('/dashboard');
+        // Guarda toda la información del usuario en el store
+        setUser(response.data);
+        // Navega a la página de estadísticas del dashboard
+        router.push('/pages/dashboard/statistics');
       } else {
         alert(`Error de autenticación: ${response.error?.message || 'Error desconocido'}`);
       }
     } catch (error: unknown) {
-      alert(`Error en la petición: ${error || 'Error desconocido'}`);
+      alert(`Error en la petición: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     }
   };
 
@@ -119,7 +122,6 @@ export default function LoginPage() {
             {errors.password && (
               <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
             )}
-            {/* Text button para resetear contraseña */}
             <div className="mt-2 text-right">
               <Link
                 href="/pages/auth/reset_passwrod"
@@ -145,7 +147,6 @@ export default function LoginPage() {
               {isSubmitting ? 'Cargando...' : 'Ingresar'}
             </button>
           </div>
-          {/* Text button para registrarse */}
           <div className="text-center">
             <Link
               href="/pages/auth/register"
