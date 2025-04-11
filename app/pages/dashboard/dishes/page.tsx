@@ -2,7 +2,25 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { getAllDishes, getDishById, createDish, updateDish, DishDto, UpdateDishDto } from '@/app/service/dish.service';
+
+// Definir esquema de validación con zod
+const dishSchema = z.object({
+  title: z.string().min(1, { message: 'El título es requerido' }),
+  description: z.string().min(1, { message: 'La descripción es requerida' }),
+  cost: z.number().min(0, { message: 'El costo debe ser un valor positivo' }),
+  calories: z.number().min(0, { message: 'Las calorías deben ser un valor positivo' }),
+  proteins: z.number().min(0, { message: 'Las proteínas deben ser un valor positivo' }),
+  fats: z.number().min(0, { message: 'Las grasas deben ser un valor positivo' }),
+  carbohydrates: z.number().min(0, { message: 'Los carbohidratos deben ser un valor positivo' }),
+  isActive: z.boolean().default(true)
+});
+
+// TypeScript type para los datos del formulario
+type DishFormData = z.infer<typeof dishSchema>;
 
 const DishClient: React.FC = () => {
   // Estados para gestionar los platos
@@ -15,8 +33,8 @@ const DishClient: React.FC = () => {
   
   // Estado para el formulario de plato
   const [showModal, setShowModal] = useState<boolean>(false);
-  const [currentDish, setCurrentDish] = useState<Partial<DishDto> | null>(null);
   const [isEditing, setIsEditing] = useState<boolean>(false);
+  const [currentDishId, setCurrentDishId] = useState<number | null>(null);
   
   // Referencia al input de archivos
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -25,6 +43,27 @@ const DishClient: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState<boolean>(false);
+
+  // Configurar react-hook-form con tipos explícitos
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    formState: { errors, isSubmitting }
+  } = useForm<DishFormData>({
+    resolver: zodResolver(dishSchema) as any, // Usar any para evitar problemas de tipos
+    defaultValues: {
+      title: '',
+      description: '',
+      cost: 0,
+      calories: 0,
+      proteins: 0,
+      fats: 0,
+      carbohydrates: 0,
+      isActive: true
+    }
+  });
 
   // Cargar platos al inicio
   useEffect(() => {
@@ -37,10 +76,10 @@ const DishClient: React.FC = () => {
       setLoading(true);
       const response = await getAllDishes({ offset, limit });
       if (response.success) {
-        setDishes(response.data.arrayList);
-        setTotalDishes(response.data.total);
+        setDishes(response.data?.arrayList || []);
+        setTotalDishes(response.data?.total || 0);
       } else {
-        setError(response.message || 'Error al cargar los platos');
+        setError(response.error?.message || 'Error al cargar los platos');
       }
     } catch (error) {
       setError('Error al conectar con el servidor');
@@ -55,10 +94,23 @@ const DishClient: React.FC = () => {
     try {
       setLoading(true);
       const response = await getDishById(id);
-      if (response.success) {
-        setCurrentDish(response.data);
+      if (response.success && response.data) {
+        // Establecer valores en el formulario
+        reset({
+          title: response.data.title,
+          description: response.data.description,
+          cost: response.data.cost,
+          calories: response.data.calories,
+          proteins: response.data.proteins,
+          fats: response.data.fats,
+          carbohydrates: response.data.carbohydrates,
+          isActive: response.data.isActive ?? true // Usar true como valor por defecto si es undefined
+        });
+        
+        setCurrentDishId(id);
         setIsEditing(true);
         setShowModal(true);
+        
         // Si el plato tiene una foto, establecer la vista previa
         if (response.data.photo) {
           setImagePreview(response.data.photo);
@@ -66,7 +118,7 @@ const DishClient: React.FC = () => {
           setImagePreview(null);
         }
       } else {
-        setError(response.message || 'Error al cargar el plato');
+        setError(response.error?.message || 'Error al cargar el plato');
       }
     } catch (error) {
       setError('Error al conectar con el servidor');
@@ -107,114 +159,134 @@ const DishClient: React.FC = () => {
   };
 
   // Función para crear un nuevo plato
-  const handleCreateDish = async (dish: Omit<DishDto, 'id'>) => {
+  const handleCreateDish = async (data: DishFormData) => {
     try {
-      setLoading(true);
+      // No establecer loading aquí, ya que isSubmitting de react-hook-form se encargará de mostrar el estado de carga
       
-      // Si hay una imagen seleccionada, subirla primero
-      let photoUrl = dish.photo;
+      // Crear FormData para enviar los datos y la imagen
+      const formData = new FormData();
+      
+      // Añadir los campos del formulario
+      formData.append('title', data.title);
+      formData.append('description', data.description);
+      formData.append('cost', data.cost.toString());
+      formData.append('calories', data.calories.toString());
+      formData.append('proteins', data.proteins.toString());
+      formData.append('fats', data.fats.toString());
+      formData.append('carbohydrates', data.carbohydrates.toString());
+      formData.append('isActive', String(data.isActive)); // Convertir a string
+      
+      // Si hay una imagen seleccionada, añadirla al FormData
       if (selectedImage) {
-        photoUrl = await uploadImage(selectedImage);
+        formData.append('photo', selectedImage);
       }
       
-      const dishWithPhoto = { ...dish, photo: photoUrl };
-      const response = await createDish(dishWithPhoto);
+      // Usar un tipo intermedio para evitar errores de TypeScript
+      const response = await createDish({
+        title: data.title,
+        description: data.description,
+        cost: data.cost,
+        calories: data.calories,
+        proteins: data.proteins,
+        fats: data.fats,
+        carbohydrates: data.carbohydrates,
+        isActive: Boolean(data.isActive), // Asegurar que sea booleano
+        photo: selectedImage as any // Usar type assertion para evitar errores
+      });
       
       if (response.success) {
         setShowModal(false);
-        fetchDishes(); // Recargar la lista
+        await fetchDishes(); // Recargar la lista
         // Limpiar selección de imagen
         setSelectedImage(null);
         setImagePreview(null);
+        reset(); // Resetear el formulario
       } else {
-        setError(response.message || 'Error al crear el plato');
+        setError(response.error?.message || 'Error al crear el plato');
       }
     } catch (error) {
       setError('Error al conectar con el servidor');
       console.error(error);
-    } finally {
-      setLoading(false);
     }
   };
 
   // Función para actualizar un plato
-  const handleUpdateDish = async (id: number, data: UpdateDishDto) => {
+  const handleUpdateDish = async (data: DishFormData) => {
+    if (!currentDishId) return;
+    
     try {
-      setLoading(true);
+      // No establecer loading aquí, ya que isSubmitting de react-hook-form se encargará de mostrar el estado de carga
       
-      // Si hay una imagen seleccionada, subirla primero
-      let photoUrl = data.photo;
+      // Crear FormData para enviar los datos y la imagen
+      const formData = new FormData();
+      
+      // Añadir los campos del formulario
+      formData.append('title', data.title);
+      formData.append('description', data.description);
+      formData.append('cost', data.cost.toString());
+      formData.append('calories', data.calories.toString());
+      formData.append('proteins', data.proteins.toString());
+      formData.append('fats', data.fats.toString());
+      formData.append('carbohydrates', data.carbohydrates.toString());
+      formData.append('isActive', String(data.isActive)); // Convertir a string
+      
+      // Si hay una imagen seleccionada, añadirla al FormData
       if (selectedImage) {
-        photoUrl = await uploadImage(selectedImage);
+        formData.append('photo', selectedImage);
       }
       
-      const dataWithPhoto = { ...data, photo: photoUrl };
-      const response = await updateDish(id, dataWithPhoto);
+      const updateData: UpdateDishDto = {
+        title: data.title,
+        description: data.description,
+        cost: data.cost,
+        calories: data.calories,
+        proteins: data.proteins,
+        fats: data.fats,
+        carbohydrates: data.carbohydrates,
+        isActive: Boolean(data.isActive), // Asegurar que sea booleano
+        photo: selectedImage as any // Usar type assertion para evitar errores
+      };
+      
+      const response = await updateDish(currentDishId, updateData);
       
       if (response.success) {
         setShowModal(false);
-        fetchDishes(); // Recargar la lista
+        await fetchDishes(); // Recargar la lista
         // Limpiar selección de imagen
         setSelectedImage(null);
         setImagePreview(null);
+        reset(); // Resetear el formulario
       } else {
-        setError(response.message || 'Error al actualizar el plato');
+        setError(response.error?.message || 'Error al actualizar el plato');
       }
     } catch (error) {
       setError('Error al conectar con el servidor');
       console.error(error);
-    } finally {
-      setLoading(false);
     }
   };
 
   // Función para manejar el envío del formulario
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!currentDish) return;
-
-    if (isEditing && currentDish.id) {
-      // Actualizar plato existente
-      const updateData: UpdateDishDto = {
-        title: currentDish.title,
-        description: currentDish.description,
-        photo: currentDish.photo,
-        cost: currentDish.cost,
-        calories: currentDish.calories,
-        proteins: currentDish.proteins,
-        fats: currentDish.fats,
-        carbohydrates: currentDish.carbohydrates,
-        isActive: currentDish.isActive
-      };
-      handleUpdateDish(currentDish.id, updateData);
+  const onSubmit = (data: DishFormData) => {
+    if (isEditing) {
+      handleUpdateDish(data);
     } else {
-      // Crear nuevo plato
-      const newDish: Omit<DishDto, 'id'> = {
-        title: currentDish.title || '',
-        description: currentDish.description || '',
-        photo: currentDish.photo,
-        cost: currentDish.cost || 0,
-        calories: currentDish.calories || 0,
-        proteins: currentDish.proteins || 0,
-        fats: currentDish.fats || 0,
-        carbohydrates: currentDish.carbohydrates || 0,
-        isActive: currentDish.isActive !== undefined ? currentDish.isActive : true
-      };
-      handleCreateDish(newDish);
+      handleCreateDish(data);
     }
   };
 
+  // Necesario para corregir problemas de tipado con react-hook-form
+  type FormSubmitHandler = (data: DishFormData) => void;
+  
   // Manejar cambio de página
   const handlePageChange = (newOffset: number) => {
     setOffset(newOffset);
   };
 
-  // Limpiar formulario para nuevo plato
+  // Preparar formulario para nuevo plato
   const handleNewDish = () => {
-    setCurrentDish({
+    reset({
       title: '',
       description: '',
-      photo: '',
       cost: 0,
       calories: 0,
       proteins: 0,
@@ -222,6 +294,7 @@ const DishClient: React.FC = () => {
       carbohydrates: 0,
       isActive: true
     });
+    setCurrentDishId(null);
     setIsEditing(false);
     setSelectedImage(null);
     setImagePreview(null);
@@ -233,6 +306,7 @@ const DishClient: React.FC = () => {
     setShowModal(false);
     setSelectedImage(null);
     setImagePreview(null);
+    reset();
     // Liberar memoria de la URL de objeto si existe
     if (imagePreview && !imagePreview.startsWith('http')) {
       URL.revokeObjectURL(imagePreview);
@@ -296,7 +370,7 @@ const DishClient: React.FC = () => {
                     </button>
                   </div>
                   
-                  <form onSubmit={handleSubmit}>
+                  <form onSubmit={handleSubmit(onSubmit as any)}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -304,11 +378,13 @@ const DishClient: React.FC = () => {
                         </label>
                         <input
                           type="text"
-                          value={currentDish?.title || ''}
-                          onChange={(e) => setCurrentDish({...currentDish, title: e.target.value})}
-                          className="w-full border border-gray-300 rounded-md px-3 py-2"
-                          required
+                          {...register('title')}
+                          className={`w-full border ${errors.title ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 text-black`}
+                          disabled={isSubmitting}
                         />
+                        {errors.title && (
+                          <p className="mt-1 text-xs text-red-600">{errors.title.message}</p>
+                        )}
                       </div>
                       
                       <div>
@@ -317,13 +393,15 @@ const DishClient: React.FC = () => {
                         </label>
                         <input
                           type="number"
-                          value={currentDish?.cost || 0}
-                          onChange={(e) => setCurrentDish({...currentDish, cost: parseFloat(e.target.value)})}
-                          className="w-full border border-gray-300 rounded-md px-3 py-2"
-                          required
-                          min="0"
                           step="0.01"
+                          min="0"
+                          {...register('cost', { valueAsNumber: true })}
+                          className={`w-full border ${errors.cost ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 text-black`}
+                          disabled={isSubmitting}
                         />
+                        {errors.cost && (
+                          <p className="mt-1 text-xs text-red-600">{errors.cost.message}</p>
+                        )}
                       </div>
                       
                       <div className="md:col-span-2">
@@ -331,12 +409,14 @@ const DishClient: React.FC = () => {
                           Descripción
                         </label>
                         <textarea
-                          value={currentDish?.description || ''}
-                          onChange={(e) => setCurrentDish({...currentDish, description: e.target.value})}
-                          className="w-full border border-gray-300 rounded-md px-3 py-2"
+                          {...register('description')}
+                          className={`w-full border ${errors.description ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 text-black`}
                           rows={3}
-                          required
+                          disabled={isSubmitting}
                         />
+                        {errors.description && (
+                          <p className="mt-1 text-xs text-red-600">{errors.description.message}</p>
+                        )}
                       </div>
 
                       {/* Selector de imagen con vista previa */}
@@ -347,20 +427,13 @@ const DishClient: React.FC = () => {
                         <div className="flex items-start space-x-4">
                           <div className="flex-1">
                             <div className="mt-1 flex items-center">
-                              <input
-                                type="text"
-                                value={currentDish?.photo || ''}
-                                onChange={(e) => setCurrentDish({...currentDish, photo: e.target.value})}
-                                className="w-full border border-gray-300 rounded-md px-3 py-2"
-                                placeholder="URL de la imagen (opcional)"
-                              />
-                              <span className="mx-2 text-gray-500">o</span>
                               <button
                                 type="button"
                                 onClick={handleSelectImage}
-                                className="px-3 py-2 border border-gray-300 rounded-md bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                className="px-4 py-2 border border-gray-300 rounded-md bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 w-full flex justify-center items-center"
+                                disabled={isSubmitting}
                               >
-                                Seleccionar imagen
+                                {selectedImage ? 'Cambiar imagen' : 'Seleccionar imagen'}
                               </button>
                               <input
                                 ref={fileInputRef}
@@ -368,10 +441,13 @@ const DishClient: React.FC = () => {
                                 accept="image/*"
                                 onChange={handleFileChange}
                                 className="hidden"
+                                disabled={isSubmitting}
                               />
                             </div>
                             <p className="mt-1 text-xs text-gray-500">
-                              JPG, PNG o GIF. Máximo 5MB.
+                              {selectedImage 
+                                ? `Archivo seleccionado: ${selectedImage.name}` 
+                                : 'JPG, PNG o GIF. Máximo 5MB.'}
                             </p>
                           </div>
                           
@@ -404,14 +480,18 @@ const DishClient: React.FC = () => {
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Estado
                         </label>
-                        <select
-                          value={currentDish?.isActive ? 'true' : 'false'}
-                          onChange={(e) => setCurrentDish({...currentDish, isActive: e.target.value === 'true'})}
-                          className="w-full border border-gray-300 rounded-md px-3 py-2"
-                        >
-                          <option value="true">Activo</option>
-                          <option value="false">Inactivo</option>
-                        </select>
+                        <div className="flex items-center">
+                          <input
+                            type="checkbox"
+                            id="isActive"
+                            {...register('isActive')}
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
+                            disabled={isSubmitting}
+                          />
+                          <label htmlFor="isActive" className="ml-2 block text-sm text-gray-900 cursor-pointer">
+                            Plato activo (disponible para el menú)
+                          </label>
+                        </div>
                       </div>
 
                       <div>
@@ -420,11 +500,14 @@ const DishClient: React.FC = () => {
                         </label>
                         <input
                           type="number"
-                          value={currentDish?.calories || 0}
-                          onChange={(e) => setCurrentDish({...currentDish, calories: parseInt(e.target.value)})}
-                          className="w-full border border-gray-300 rounded-md px-3 py-2"
                           min="0"
+                          {...register('calories', { valueAsNumber: true })}
+                          className={`w-full border ${errors.calories ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 text-black`}
+                          disabled={isSubmitting}
                         />
+                        {errors.calories && (
+                          <p className="mt-1 text-xs text-red-600">{errors.calories.message}</p>
+                        )}
                       </div>
 
                       <div>
@@ -433,11 +516,14 @@ const DishClient: React.FC = () => {
                         </label>
                         <input
                           type="number"
-                          value={currentDish?.proteins || 0}
-                          onChange={(e) => setCurrentDish({...currentDish, proteins: parseInt(e.target.value)})}
-                          className="w-full border border-gray-300 rounded-md px-3 py-2"
                           min="0"
+                          {...register('proteins', { valueAsNumber: true })}
+                          className={`w-full border ${errors.proteins ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 text-black`}
+                          disabled={isSubmitting}
                         />
+                        {errors.proteins && (
+                          <p className="mt-1 text-xs text-red-600">{errors.proteins.message}</p>
+                        )}
                       </div>
 
                       <div>
@@ -446,11 +532,14 @@ const DishClient: React.FC = () => {
                         </label>
                         <input
                           type="number"
-                          value={currentDish?.fats || 0}
-                          onChange={(e) => setCurrentDish({...currentDish, fats: parseInt(e.target.value)})}
-                          className="w-full border border-gray-300 rounded-md px-3 py-2"
                           min="0"
+                          {...register('fats', { valueAsNumber: true })}
+                          className={`w-full border ${errors.fats ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 text-black`}
+                          disabled={isSubmitting}
                         />
+                        {errors.fats && (
+                          <p className="mt-1 text-xs text-red-600">{errors.fats.message}</p>
+                        )}
                       </div>
 
                       <div>
@@ -459,11 +548,14 @@ const DishClient: React.FC = () => {
                         </label>
                         <input
                           type="number"
-                          value={currentDish?.carbohydrates || 0}
-                          onChange={(e) => setCurrentDish({...currentDish, carbohydrates: parseInt(e.target.value)})}
-                          className="w-full border border-gray-300 rounded-md px-3 py-2"
                           min="0"
+                          {...register('carbohydrates', { valueAsNumber: true })}
+                          className={`w-full border ${errors.carbohydrates ? 'border-red-500' : 'border-gray-300'} rounded-md px-3 py-2 text-black`}
+                          disabled={isSubmitting}
                         />
+                        {errors.carbohydrates && (
+                          <p className="mt-1 text-xs text-red-600">{errors.carbohydrates.message}</p>
+                        )}
                       </div>
                     </div>
 
@@ -472,15 +564,26 @@ const DishClient: React.FC = () => {
                         type="button"
                         onClick={handleCloseModal}
                         className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                        disabled={isSubmitting}
                       >
                         Cancelar
                       </button>
                       <button
                         type="submit"
-                        className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-                        disabled={loading || uploadingImage}
+                        className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={isSubmitting || uploadingImage}
                       >
-                        {loading || uploadingImage ? 'Guardando...' : isEditing ? 'Actualizar' : 'Crear'}
+                        {isSubmitting ? (
+                          <div className="flex items-center">
+                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            {isEditing ? 'Actualizando...' : 'Creando...'}
+                          </div>
+                        ) : (
+                          isEditing ? 'Actualizar' : 'Crear'
+                        )}
                       </button>
                     </div>
                   </form>
@@ -574,8 +677,27 @@ const DishClient: React.FC = () => {
                           Editar
                         </button>
                         <button 
-                          onClick={() => handleUpdateDish(dish.id, { isActive: !dish.isActive })}
+                          onClick={() => {
+                            const updateData: UpdateDishDto = { isActive: !dish.isActive };
+                            setLoading(true);
+                            updateDish(dish.id, updateData)
+                              .then(response => {
+                                if (response.success) {
+                                  fetchDishes();
+                                } else {
+                                  setError(response.error?.message || 'Error al actualizar el estado');
+                                }
+                              })
+                              .catch(error => {
+                                setError('Error al conectar con el servidor');
+                                console.error(error);
+                              })
+                              .finally(() => {
+                                setLoading(false);
+                              });
+                          }}
                           className={`${dish.isActive ? 'text-red-600 hover:text-red-900' : 'text-green-600 hover:text-green-900'}`}
+                          disabled={loading}
                         >
                           {dish.isActive ? 'Desactivar' : 'Activar'}
                         </button>

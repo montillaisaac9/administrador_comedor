@@ -17,10 +17,23 @@ export interface DishDto {
   isActive?: boolean;
 }
 
+export interface CreateDishDto {
+  id: number;
+  title: string;
+  description: string;
+  photo?: File;
+  cost: number;
+  calories: number;
+  proteins: number;
+  fats: number;
+  carbohydrates: number;
+  isActive?: boolean;
+}
+
 // 1. Crear Plato (POST /dish)
 // Función para crear un plato utilizando multipart/form-data
 export const createDish = async (
-    params: Omit<DishDto, 'id'>
+    params: Omit<CreateDishDto, 'id'>
   ): Promise<IResponse<DishDto>> => {
     const formData = new FormData();
   
@@ -35,8 +48,6 @@ export const createDish = async (
   
     // Campo opcional: photo
     if (params.photo) {
-      // Si params.photo es un File, se debe enviar directamente.
-      // Si es un string (por ejemplo, URL o base64), conviértelo según la lógica de tu backend.
       formData.append('image', params.photo);
     }
   
@@ -87,7 +98,7 @@ export const getDishById = async (
 export interface UpdateDishDto {
   title?: string;
   description?: string;
-  photo?: string;
+  photo?: File;
   cost?: number;
   calories?: number;
   proteins?: number;
@@ -98,8 +109,33 @@ export interface UpdateDishDto {
 
 export const updateDish = async (
   id: number,
-  data: UpdateDishDto
+  params: UpdateDishDto
 ): Promise<IResponse<DishDto>> => {
-  const response = await api.patch<IResponse<DishDto>>(`/dish/${id}`, data);
+  const formData = new FormData();
+  
+  // Campos obligatorios
+  if (params.title) formData.append('title', params.title);
+  if (params.description) formData.append('description', params.description);
+  if (params.cost) formData.append('cost', params.cost.toString());
+  if (params.calories) formData.append('calories', params.calories.toString());
+  if (params.proteins) formData.append('proteins', params.proteins.toString());
+  if (params.fats) formData.append('fats', params.fats.toString());
+  if (params.carbohydrates) formData.append('carbohydrates', params.carbohydrates.toString());
+
+  // Campo opcional: photo
+  if (params.photo) {
+    formData.append('image', params.photo);
+  }
+
+  // Campo opcional: isActive
+  if (params.isActive !== undefined && params.isActive !== null) {
+    formData.append('isActive', params.isActive.toString());
+  }
+
+  const response = await api.patch<IResponse<DishDto>>(`/dish/${id}`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
   return response.data;
 };
