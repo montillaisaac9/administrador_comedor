@@ -5,7 +5,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { getAllDishes, getDishById, createDish, updateDish, DishDto, UpdateDishDto } from '@/app/service/dish.service';
+import { getAllDishes, getDishById, createDish, updateDish, DishDto, UpdateDishDto, DeleteDish } from '@/app/service/dish.service';
+import Image from 'next/image';
 
 // Definir esquema de validación con zod
 const dishSchema = z.object({
@@ -27,7 +28,7 @@ const DishClient: React.FC = () => {
   const [dishes, setDishes] = useState<DishDto[]>([]);
   const [totalDishes, setTotalDishes] = useState<number>(0);
   const [offset, setOffset] = useState<number>(0);
-  const [limit, setLimit] = useState<number>(10);
+  const [limit] = useState<number>(10);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -42,14 +43,13 @@ const DishClient: React.FC = () => {
   // Estado para la imagen
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [uploadingImage, setUploadingImage] = useState<boolean>(false);
+  const [uploadingImage] = useState<boolean>(false);
 
   // Configurar react-hook-form con tipos explícitos
   const {
     register,
     handleSubmit,
     reset,
-    setValue,
     formState: { errors, isSubmitting }
   } = useForm<DishFormData>({
     resolver: zodResolver(dishSchema) as any, // Usar any para evitar problemas de tipos
@@ -95,7 +95,7 @@ const DishClient: React.FC = () => {
       setLoading(true);
       const response = await getDishById(id);
       if (response.success && response.data) {
-        // Establecer valores en el formulario
+        // Establecer valformulario
         reset({
           title: response.data.title,
           description: response.data.description,
@@ -133,7 +133,6 @@ const DishClient: React.FC = () => {
     const file = e.target.files?.[0];
     if (file) {
       setSelectedImage(file);
-      // Crear URL de vista previa
       const previewUrl = URL.createObjectURL(file);
       setImagePreview(previewUrl);
     }
@@ -142,20 +141,6 @@ const DishClient: React.FC = () => {
   // Función para abrir el selector de archivos
   const handleSelectImage = () => {
     fileInputRef.current?.click();
-  };
-
-  // Función para subir la imagen (simulada)
-  const uploadImage = async (file: File): Promise<string> => {
-    // Aquí deberías implementar la lógica real de subida de imágenes a tu servidor
-    // Esta es una simulación que devuelve una URL temporal
-    setUploadingImage(true);
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        setUploadingImage(false);
-        // En una implementación real, esta URL vendría del servidor después de subir la imagen
-        resolve(URL.createObjectURL(file));
-      }, 1500);
-    });
   };
 
   // Función para crear un nuevo plato
@@ -180,7 +165,6 @@ const DishClient: React.FC = () => {
       if (selectedImage) {
         formData.append('photo', selectedImage);
       }
-      
       // Usar un tipo intermedio para evitar errores de TypeScript
       const response = await createDish({
         title: data.title,
@@ -191,7 +175,7 @@ const DishClient: React.FC = () => {
         fats: data.fats,
         carbohydrates: data.carbohydrates,
         isActive: Boolean(data.isActive), // Asegurar que sea booleano
-        photo: selectedImage as any // Usar type assertion para evitar errores
+        photo: selectedImage as File // Usar type assertion para evitar errores
       });
       
       if (response.success) {
@@ -244,15 +228,14 @@ const DishClient: React.FC = () => {
         fats: data.fats,
         carbohydrates: data.carbohydrates,
         isActive: Boolean(data.isActive), // Asegurar que sea booleano
-        photo: selectedImage as any // Usar type assertion para evitar errores
+        photo: selectedImage as File // Usar type assertion para evitar errores
       };
       
       const response = await updateDish(currentDishId, updateData);
-      
+     
       if (response.success) {
         setShowModal(false);
-        await fetchDishes(); // Recargar la lista
-        // Limpiar selección de imagen
+        await fetchDishes();
         setSelectedImage(null);
         setImagePreview(null);
         reset(); // Resetear el formulario
@@ -260,6 +243,7 @@ const DishClient: React.FC = () => {
         setError(response.error?.message || 'Error al actualizar el plato');
       }
     } catch (error) {
+      
       setError('Error al conectar con el servidor');
       console.error(error);
     }
@@ -274,9 +258,6 @@ const DishClient: React.FC = () => {
     }
   };
 
-  // Necesario para corregir problemas de tipado con react-hook-form
-  type FormSubmitHandler = (data: DishFormData) => void;
-  
   // Manejar cambio de página
   const handlePageChange = (newOffset: number) => {
     setOffset(newOffset);
@@ -312,6 +293,22 @@ const DishClient: React.FC = () => {
       URL.revokeObjectURL(imagePreview);
     }
   };
+
+  const deleteDish = async (id: number) => {
+    try {
+      setLoading(true);
+      const response = await DeleteDish(id);
+      if (response.success) {
+        fetchDishes();
+      } else {
+        setError(response.error?.message || 'Error al eliminar el plato');
+      }
+    }
+     catch (error) {
+      setError('Error al conectar con el servidor');
+      console.error(error);
+    }
+  }
 
   return (
     <div className="bg-gray-50 min-h-screen p-6">
@@ -462,7 +459,9 @@ const DishClient: React.FC = () => {
                                 <span>Subiendo...</span>
                               </div>
                             ) : imagePreview ? (
-                              <img
+                              <Image
+                              width={100}
+                            height={100}
                                 src={imagePreview}
                                 alt="Vista previa"
                                 className="h-full w-full object-cover"
@@ -638,7 +637,8 @@ const DishClient: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           {dish.photo ? (
-                            <img src={dish.photo} alt={dish.title} className="h-10 w-10 rounded-full object-cover mr-3" />
+                            <Image width={40}
+                            height={40} src={dish.photo} alt={dish.title} className="h-10 w-10 rounded-full object-cover mr-3" />
                           ) : (
                             <div className="h-10 w-10 rounded-full bg-gray-200 mr-3 flex items-center justify-center text-gray-500">
                               🍽️
@@ -663,10 +663,10 @@ const DishClient: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${dish.isActive 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'}`}
+                          ?  'bg-red-100 text-red-800'
+                          : 'bg-green-100 text-green-800'}`}
                         >
-                          {dish.isActive ? 'Activo' : 'Inactivo'}
+                          {dish.isActive ? 'I' : 'Activo'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -678,28 +678,12 @@ const DishClient: React.FC = () => {
                         </button>
                         <button 
                           onClick={() => {
-                            const updateData: UpdateDishDto = { isActive: !dish.isActive };
-                            setLoading(true);
-                            updateDish(dish.id, updateData)
-                              .then(response => {
-                                if (response.success) {
-                                  fetchDishes();
-                                } else {
-                                  setError(response.error?.message || 'Error al actualizar el estado');
-                                }
-                              })
-                              .catch(error => {
-                                setError('Error al conectar con el servidor');
-                                console.error(error);
-                              })
-                              .finally(() => {
-                                setLoading(false);
-                              });
+                            deleteDish(dish.id);
                           }}
-                          className={`${dish.isActive ? 'text-red-600 hover:text-red-900' : 'text-green-600 hover:text-green-900'}`}
+                          className='text-red-600 hover:text-red-900'
                           disabled={loading}
                         >
-                          {dish.isActive ? 'Desactivar' : 'Activar'}
+                        eliminar
                         </button>
                       </td>
                     </tr>
@@ -815,5 +799,6 @@ const DishClient: React.FC = () => {
     </div>
   );
 };
+
 
 export default DishClient;

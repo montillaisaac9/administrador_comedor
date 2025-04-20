@@ -21,6 +21,16 @@ const nextConfig = {
       },
     ];
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '3000', // Ajusta este puerto si usas uno diferente
+        pathname: '/uploads/**', // Permite todas las subrutas bajo /uploads/
+      },
+    ],
+  },
 };
 
 export default nextConfig;

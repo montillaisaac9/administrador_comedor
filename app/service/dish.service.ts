@@ -82,6 +82,7 @@ export const getAllDishes = async (
       total: number;
     }>
   >('/dish/all', params);
+  console.log(response.data)
   return response.data;
 };
 
@@ -112,8 +113,7 @@ export const updateDish = async (
   params: UpdateDishDto
 ): Promise<IResponse<DishDto>> => {
   const formData = new FormData();
-  
-  // Campos obligatorios
+  console.log(params)
   if (params.title) formData.append('title', params.title);
   if (params.description) formData.append('description', params.description);
   if (params.cost) formData.append('cost', params.cost.toString());
@@ -121,15 +121,13 @@ export const updateDish = async (
   if (params.proteins) formData.append('proteins', params.proteins.toString());
   if (params.fats) formData.append('fats', params.fats.toString());
   if (params.carbohydrates) formData.append('carbohydrates', params.carbohydrates.toString());
-
-  // Campo opcional: photo
-  if (params.photo) {
-    formData.append('image', params.photo);
-  }
-
-  // Campo opcional: isActive
   if (params.isActive !== undefined && params.isActive !== null) {
     formData.append('isActive', params.isActive.toString());
+  }
+
+  if (params.photo) {
+    
+    formData.append('image', params.photo);
   }
 
   const response = await api.patch<IResponse<DishDto>>(`/dish/${id}`, formData, {
@@ -137,5 +135,11 @@ export const updateDish = async (
       'Content-Type': 'multipart/form-data',
     },
   });
+  console.log(response)
   return response.data;
 };
+
+export const DeleteDish = async (id: number): Promise<IResponse<string>> => {
+  const response = await api.delete<IResponse<string>>(`/dish/${id}`);
+  return response.data;
+}
