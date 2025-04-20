@@ -2,33 +2,7 @@
 
 import api from '@/app/lib/axios';
 import type { IResponse } from '@/app/types/response';
-
-// Define la interfaz que representa un Plato
-export interface DishDto {
-  id: number;
-  title: string;
-  description: string;
-  photo?: string;
-  cost: number;
-  calories: number;
-  proteins: number;
-  fats: number;
-  carbohydrates: number;
-  isActive?: boolean;
-}
-
-export interface CreateDishDto {
-  id: number;
-  title: string;
-  description: string;
-  photo?: File;
-  cost: number;
-  calories: number;
-  proteins: number;
-  fats: number;
-  carbohydrates: number;
-  isActive?: boolean;
-}
+import { CreateDishDto, DishDto, UpdateDishDto } from '../types/dish';
 
 // 1. Crear Plato (POST /dish)
 // Función para crear un plato utilizando multipart/form-data
@@ -93,20 +67,6 @@ export const getDishById = async (
   const response = await api.get<IResponse<DishDto>>(`/dish/${id}`);
   return response.data;
 };
-
-// 4. Actualizar Plato (PATCH /dish/:id)
-// Define el DTO para actualizar platos, con todos los campos opcionales
-export interface UpdateDishDto {
-  title?: string;
-  description?: string;
-  photo?: File;
-  cost?: number;
-  calories?: number;
-  proteins?: number;
-  fats?: number;
-  carbohydrates?: number;
-  isActive?: boolean;
-}
 
 export const updateDish = async (
   id: number,

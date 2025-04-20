@@ -5,8 +5,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { getAllDishes, getDishById, createDish, updateDish, DishDto, UpdateDishDto, DeleteDish } from '@/app/service/dish.service';
+import { getAllDishes, getDishById, createDish, updateDish, DeleteDish } from '@/app/service/dish.service';
 import Image from 'next/image';
+import { DishDto, UpdateDishDto } from '@/app/types/dish';
 
 // Definir esquema de validación con zod
 const dishSchema = z.object({
