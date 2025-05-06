@@ -10,20 +10,22 @@ import { es } from 'date-fns/locale';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { getDish, createMenu, getAllMenus } from '@/app/service/menu.service';
-import { DishSelect, MenuDto } from '@/app/types/menu';
+import { DishSelect, IMenuDetails, IMenuItemDetail, WeekDay } from '@/app/types/menu';
 
-// Esquema de validación con Zod
+// Esquema de validación con Zod actualizado para usar menuItems
 const menuSchema = z.object({
   weekStart: z.date().refine((date) => isMonday(date), {
     message: "La fecha de inicio debe ser un lunes"
   }),
   weekEnd: z.date(),
   isActive: z.boolean(),
-  mondayId: z.number().int().positive(),
-  tuesdayId: z.number().int().positive(),
-  wednesdayId: z.number().int().positive(),
-  thursdayId: z.number().int().positive(),
-  fridayId: z.number().int().positive(),
+  menuItems: z.array(
+    z.object({
+      weekDay: z.nativeEnum(WeekDay),
+      dishId: z.coerce.number().int().positive(),
+      date: z.string()
+    })
+  ).length(5, { message: "Debe asignar platos para todos los días de la semana" })
 });
 
 type MenuFormValues = z.infer<typeof menuSchema>;
@@ -32,7 +34,7 @@ const MenuManagement: React.FC = () => {
   // Estados
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [dishes, setDishes] = useState<DishSelect[]>([]);
-  const [menus, setMenus] = useState<MenuDto[]>([]);
+  const [menus, setMenus] = useState<IMenuDetails[]>([]);
   const [totalMenus, setTotalMenus] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -46,21 +48,29 @@ const MenuManagement: React.FC = () => {
       weekStart: startOfWeek(new Date(), { weekStartsOn: 1 }),
       weekEnd: endOfWeek(new Date(), { weekStartsOn: 1 }),
       isActive: true,
-      mondayId: 0,
-      tuesdayId: 0,
-      wednesdayId: 0,
-      thursdayId: 0,
-      fridayId: 0,
+      menuItems: []
     }
   });
 
   // Observador para la fecha de inicio
   const watchWeekStart = watch('weekStart');
   
-  // Efecto para actualizar la fecha de fin cuando cambia la fecha de inicio
+  // Efecto para actualizar la fecha de fin y los menuItems cuando cambia la fecha de inicio
   useEffect(() => {
     if (watchWeekStart) {
+      // Actualizar la fecha de fin (viernes)
       setValue('weekEnd', addDays(watchWeekStart, 4)); // Lunes a viernes (5 días)
+      
+      // Generar los menuItems con fechas actualizadas
+      const menuItems = [
+        { weekDay: WeekDay.MONDAY, dishId: 0, date: format(watchWeekStart, 'yyyy-MM-dd') },
+        { weekDay: WeekDay.TUESDAY, dishId: 0, date: format(addDays(watchWeekStart, 1), 'yyyy-MM-dd') },
+        { weekDay: WeekDay.WEDNESDAY, dishId: 0, date: format(addDays(watchWeekStart, 2), 'yyyy-MM-dd') },
+        { weekDay: WeekDay.THURSDAY, dishId: 0, date: format(addDays(watchWeekStart, 3), 'yyyy-MM-dd') },
+        { weekDay: WeekDay.FRIDAY, dishId: 0, date: format(addDays(watchWeekStart, 4), 'yyyy-MM-dd') }
+      ];
+      
+      setValue('menuItems', menuItems);
     }
   }, [watchWeekStart, setValue]);
 
@@ -107,7 +117,19 @@ const MenuManagement: React.FC = () => {
   const onSubmit = async (data: MenuFormValues) => {
     setLoading(true);
     try {
-      const response = await createMenu(data);
+      // Convertir las fechas a formato string para la API
+      const formattedData = {
+        weekStart: format(data.weekStart, 'yyyy-MM-dd'),
+        weekEnd: format(data.weekEnd, 'yyyy-MM-dd'),
+        isActive: data.isActive,
+        menuItems: data.menuItems.map(item => ({
+          weekDay: item.weekDay,
+          dishId: item.dishId,
+          date: item.date
+        }))
+      };
+      
+      const response = await createMenu(formattedData);
       if (response.success) {
         // Recargar la lista de menús
         const offset = (currentPage - 1) * limit;
@@ -150,6 +172,17 @@ const MenuManagement: React.FC = () => {
 
   // Calcular total de páginas
   const totalPages = Math.ceil(totalMenus / limit);
+
+  // Función para obtener el plato por día de la semana
+  const getDishByWeekDay = (menu: IMenuDetails, weekDay: WeekDay): IMenuItemDetail | undefined => {
+    return menu.menuItems.find(item => item.weekDay === weekDay);
+  };
+
+  // Función para obtener el nombre del plato
+  const getDishName = (dishId: number): string => {
+    const dish = dishes.find(d => d.id === dishId);
+    return dish ? dish.title : `Plato #${dishId}`;
+  };
 
   return (
     <div className="p-6">
@@ -195,7 +228,12 @@ const MenuManagement: React.FC = () => {
               </tr>
             ) : (
               menus.map((menu) => {
-                // Para resolver el problema de las fechas, verificamos que menu.weekStart y menu.weekEnd sean valores válidos
+                const mondayDish = getDishByWeekDay(menu, WeekDay.MONDAY);
+                const tuesdayDish = getDishByWeekDay(menu, WeekDay.TUESDAY);
+                const wednesdayDish = getDishByWeekDay(menu, WeekDay.WEDNESDAY);
+                const thursdayDish = getDishByWeekDay(menu, WeekDay.THURSDAY);
+                const fridayDish = getDishByWeekDay(menu, WeekDay.FRIDAY);
+                
                 return (
                   <tr key={menu.id}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -208,11 +246,21 @@ const MenuManagement: React.FC = () => {
                         {menu.isActive ? 'Activo' : 'Inactivo'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{menu.mondayId}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{menu.tuesdayId}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{menu.wednesdayId}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{menu.thursdayId}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{menu.fridayId}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {mondayDish && mondayDish.dish ? mondayDish.dish.title : mondayDish ? `Plato #${mondayDish.dishId}` : '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {tuesdayDish && tuesdayDish.dish ? tuesdayDish.dish.title : tuesdayDish ? `Plato #${tuesdayDish.dishId}` : '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {wednesdayDish && wednesdayDish.dish ? wednesdayDish.dish.title : wednesdayDish ? `Plato #${wednesdayDish.dishId}` : '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {thursdayDish && thursdayDish.dish ? thursdayDish.dish.title : thursdayDish ? `Plato #${thursdayDish.dishId}` : '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {fridayDish && fridayDish.dish ? fridayDish.dish.title : fridayDish ? `Plato #${fridayDish.dishId}` : '-'}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <button className="text-blue-600 hover:text-blue-900 mr-3">Editar</button>
                       <button className="text-red-600 hover:text-red-900">Eliminar</button>
@@ -332,7 +380,7 @@ const MenuManagement: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Lunes</label>
                   <Controller
                     control={control}
-                    name="mondayId"
+                    name="menuItems.0.dishId"
                     render={({ field }) => (
                       <select
                         value={field.value}
@@ -346,7 +394,9 @@ const MenuManagement: React.FC = () => {
                       </select>
                     )}
                   />
-                  {errors.mondayId && <p className="mt-1 text-sm text-red-600">{errors.mondayId.message}</p>}
+                  {errors.menuItems?.[0]?.dishId && (
+                    <p className="mt-1 text-sm text-red-600">{errors.menuItems?.[0]?.dishId.message}</p>
+                  )}
                 </div>
 
                 {/* Martes */}
@@ -354,7 +404,7 @@ const MenuManagement: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Martes</label>
                   <Controller
                     control={control}
-                    name="tuesdayId"
+                    name="menuItems.1.dishId"
                     render={({ field }) => (
                       <select
                         value={field.value}
@@ -368,15 +418,17 @@ const MenuManagement: React.FC = () => {
                       </select>
                     )}
                   />
-                  {errors.tuesdayId && <p className="mt-1 text-sm text-red-600">{errors.tuesdayId.message}</p>}
+                  {errors.menuItems?.[1]?.dishId && (
+                    <p className="mt-1 text-sm text-red-600">{errors.menuItems?.[1]?.dishId.message}</p>
+                  )}
                 </div>
 
                 {/* Miércoles */}
                 <div>
-                  <label className="block text-sm  font-medium text-gray-700 mb-1">Miércoles</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Miércoles</label>
                   <Controller
                     control={control}
-                    name="wednesdayId"
+                    name="menuItems.2.dishId"
                     render={({ field }) => (
                       <select
                         value={field.value}
@@ -390,7 +442,9 @@ const MenuManagement: React.FC = () => {
                       </select>
                     )}
                   />
-                  {errors.wednesdayId && <p className="mt-1 text-sm text-red-600">{errors.wednesdayId.message}</p>}
+                  {errors.menuItems?.[2]?.dishId && (
+                    <p className="mt-1 text-sm text-red-600">{errors.menuItems?.[2]?.dishId.message}</p>
+                  )}
                 </div>
 
                 {/* Jueves */}
@@ -398,7 +452,7 @@ const MenuManagement: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Jueves</label>
                   <Controller
                     control={control}
-                    name="thursdayId"
+                    name="menuItems.3.dishId"
                     render={({ field }) => (
                       <select
                         value={field.value}
@@ -412,7 +466,9 @@ const MenuManagement: React.FC = () => {
                       </select>
                     )}
                   />
-                  {errors.thursdayId && <p className="mt-1 text-sm text-red-600">{errors.thursdayId.message}</p>}
+                  {errors.menuItems?.[3]?.dishId && (
+                    <p className="mt-1 text-sm text-red-600">{errors.menuItems?.[3]?.dishId.message}</p>
+                  )}
                 </div>
 
                 {/* Viernes */}
@@ -420,7 +476,7 @@ const MenuManagement: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Viernes</label>
                   <Controller
                     control={control}
-                    name="fridayId"
+                    name="menuItems.4.dishId"
                     render={({ field }) => (
                       <select
                         value={field.value}
@@ -434,7 +490,9 @@ const MenuManagement: React.FC = () => {
                       </select>
                     )}
                   />
-                  {errors.fridayId && <p className="mt-1 text-sm text-red-600">{errors.fridayId.message}</p>}
+                  {errors.menuItems?.[4]?.dishId && (
+                    <p className="mt-1 text-sm text-red-600">{errors.menuItems?.[4]?.dishId.message}</p>
+                  )}
                 </div>
               </>
             )}
