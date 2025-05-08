@@ -9,8 +9,8 @@ import { format, addDays, startOfWeek, endOfWeek, isMonday, parseISO } from 'dat
 import { es } from 'date-fns/locale';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
-import { getDish, createMenu, getAllMenus } from '@/app/service/menu.service';
-import { DishSelect, IMenuDetails, IMenuItemDetail, WeekDay } from '@/app/types/menu';
+import { getDish, createMenu, getAllMenus, updateMenu, DeleteMenu } from '@/app/service/menu.service';
+import { DishSelect, IMenuDetails, IMenuItemDetail, WeekDay, IUpdateMenu } from '@/app/types/menu';
 
 // Esquema de validación con Zod actualizado para usar menuItems
 const menuSchema = z.object({
@@ -33,16 +33,20 @@ type MenuFormValues = z.infer<typeof menuSchema>;
 const MenuManagement: React.FC = () => {
   // Estados
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [dishes, setDishes] = useState<DishSelect[]>([]);
   const [menus, setMenus] = useState<IMenuDetails[]>([]);
   const [totalMenus, setTotalMenus] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [loadingDishes, setLoadingDishes] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [currentMenuId, setCurrentMenuId] = useState<number | null>(null);
+  const [menuToDelete, setMenuToDelete] = useState<number | null>(null);
   const limit = 5;
 
   // React Hook Form
-  const { control, handleSubmit, setValue, watch, formState: { errors } } = useForm<MenuFormValues>({
+  const { control, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<MenuFormValues>({
     resolver: zodResolver(menuSchema),
     defaultValues: {
       weekStart: startOfWeek(new Date(), { weekStartsOn: 1 }),
@@ -92,28 +96,52 @@ const MenuManagement: React.FC = () => {
   }, []);
 
   // Cargar la lista de menús con paginación
-  useEffect(() => {
-    const loadMenus = async () => {
-      setLoading(true);
-      try {
-        const offset = (currentPage - 1) * limit;
-        const response = await getAllMenus({ offset, limit });
-        
-        if (response.success) {
-          setMenus(response.data.arrayList);
-          setTotalMenus(response.data.total);
-        }
-      } catch (error) {
-        console.error('Error al cargar los menús:', error);
-      } finally {
-        setLoading(false);
+  const loadMenus = async () => {
+    setLoading(true);
+    try {
+      const offset = (currentPage - 1) * limit;
+      const response = await getAllMenus({ offset, limit });
+      
+      if (response.success && response.data != null) {
+        setMenus(response.data.arrayList);
+        setTotalMenus(response.data.total);
       }
-    };
-    
+    } catch (error) {
+      console.error('Error al cargar los menús:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadMenus();
   }, [currentPage]);
 
-  // Manejador para crear un nuevo menú
+  // Abrir el modal de edición con los datos del menú seleccionado
+  const handleEditMenu = (menu: IMenuDetails) => {
+    setIsEditing(true);
+    setCurrentMenuId(menu.id);
+    
+    // Parsear fechas
+    const weekStartDate = parseISO(menu.weekStart);
+    const weekEndDate = parseISO(menu.weekEnd);
+    
+    // Establecer valores del formulario
+    reset({
+      weekStart: weekStartDate,
+      weekEnd: weekEndDate,
+      isActive: menu.isActive,
+      menuItems: menu.menuItems.map(item => ({
+        weekDay: item.weekDay,
+        dishId: item.dishId,
+        date: item.date
+      }))
+    });
+    
+    setIsModalOpen(true);
+  };
+
+  // Manejador para crear o actualizar un menú
   const onSubmit = async (data: MenuFormValues) => {
     setLoading(true);
     try {
@@ -129,22 +157,78 @@ const MenuManagement: React.FC = () => {
         }))
       };
       
-      const response = await createMenu(formattedData);
+      let response;
+      
+      if (isEditing && currentMenuId) {
+        // Actualizar menú existente
+        response = await updateMenu(currentMenuId, formattedData);
+      } else {
+        // Crear nuevo menú
+        response = await createMenu(formattedData);
+      }
+      
       if (response.success) {
         // Recargar la lista de menús
-        const offset = (currentPage - 1) * limit;
-        const menuResponse = await getAllMenus({ offset, limit });
-        if (menuResponse.success) {
-          setMenus(menuResponse.data.arrayList);
-          setTotalMenus(menuResponse.data.total);
-        }
-        setIsModalOpen(false);
+        await loadMenus();
+        closeModal();
       }
     } catch (error) {
-      console.error('Error al crear menú:', error);
+      console.error(`Error al ${isEditing ? 'actualizar' : 'crear'} menú:`, error);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Manejador para eliminar un menú
+  const handleDeleteMenu = async () => {
+    if (menuToDelete) {
+      setLoading(true);
+      try {
+        const response = await DeleteMenu(menuToDelete);
+        if (response.success) {
+          // Recargar la lista de menús
+          await loadMenus();
+        }
+      } catch (error) {
+        console.error('Error al eliminar menú:', error);
+      } finally {
+        setLoading(false);
+        setIsDeleteModalOpen(false);
+        setMenuToDelete(null);
+      }
+    }
+  };
+
+  // Cerrar modal y resetear estados
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setIsEditing(false);
+    setCurrentMenuId(null);
+    reset({
+      weekStart: startOfWeek(new Date(), { weekStartsOn: 1 }),
+      weekEnd: endOfWeek(new Date(), { weekStartsOn: 1 }),
+      isActive: true,
+      menuItems: []
+    });
+  };
+
+  // Función para abrir modal de nuevo menú
+  const openNewMenuModal = () => {
+    setIsEditing(false);
+    setCurrentMenuId(null);
+    reset({
+      weekStart: startOfWeek(new Date(), { weekStartsOn: 1 }),
+      weekEnd: endOfWeek(new Date(), { weekStartsOn: 1 }),
+      isActive: true,
+      menuItems: []
+    });
+    setIsModalOpen(true);
+  };
+
+  // Función para confirmar eliminación
+  const confirmDelete = (menuId: number) => {
+    setMenuToDelete(menuId);
+    setIsDeleteModalOpen(true);
   };
 
   // Función para formatear fechas de manera segura
@@ -189,7 +273,7 @@ const MenuManagement: React.FC = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Gestión de Menús Semanales</h1>
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={openNewMenuModal}
           className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded"
         >
           Nuevo Menú
@@ -262,8 +346,18 @@ const MenuManagement: React.FC = () => {
                       {fridayDish && fridayDish.dish ? fridayDish.dish.title : fridayDish ? `Plato #${fridayDish.dishId}` : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <button className="text-blue-600 hover:text-blue-900 mr-3">Editar</button>
-                      <button className="text-red-600 hover:text-red-900">Eliminar</button>
+                      <button 
+                        onClick={() => handleEditMenu(menu)} 
+                        className="text-blue-600 hover:text-blue-900 mr-3"
+                      >
+                        Editar
+                      </button>
+                      <button 
+                        onClick={() => confirmDelete(menu.id)} 
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        Eliminar
+                      </button>
                     </td>
                   </tr>
                 );
@@ -305,8 +399,12 @@ const MenuManagement: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal para crear nuevo menú */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Nuevo Menú">
+      {/* Modal para crear o editar menú */}
+      <Modal 
+        isOpen={isModalOpen} 
+        onClose={closeModal} 
+        title={isEditing ? "Editar Menú" : "Nuevo Menú"}
+      >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -501,7 +599,7 @@ const MenuManagement: React.FC = () => {
           <div className="flex justify-end space-x-3 pt-4">
             <button
               type="button"
-              onClick={() => setIsModalOpen(false)}
+              onClick={closeModal}
               className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
             >
               Cancelar
@@ -513,14 +611,47 @@ const MenuManagement: React.FC = () => {
             >
               {loading ? (
                 <div className="flex items-center">
-                  <Spinner size="sm" className="mr-2" /> Creando...
+                  <Spinner size="sm" className="mr-2" /> {isEditing ? 'Actualizando...' : 'Creando...'}
                 </div>
               ) : (
-                'Crear Menú'
+                isEditing ? 'Actualizar Menú' : 'Crear Menú'
               )}
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Modal de confirmación para eliminar */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        title="Confirmar eliminación"
+      >
+        <div className="py-4">
+          <p className="text-gray-700">¿Está seguro de que desea eliminar este menú? Esta acción no se puede deshacer.</p>
+          
+          <div className="flex justify-end space-x-3 mt-6">
+            <button
+              onClick={() => setIsDeleteModalOpen(false)}
+              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleDeleteMenu}
+              disabled={loading}
+              className={`px-4 py-2 rounded-md text-sm font-medium text-white ${loading ? 'bg-red-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'}`}
+            >
+              {loading ? (
+                <div className="flex items-center">
+                  <Spinner size="sm" className="mr-2" /> Eliminando...
+                </div>
+              ) : (
+                'Eliminar'
+              )}
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   );
