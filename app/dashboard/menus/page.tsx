@@ -11,6 +11,7 @@ import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { getDish, createMenu, getAllMenus, updateMenu, DeleteMenu } from '@/app/service/menu.service';
 import { DishSelect, IMenuDetails, IMenuItemDetail, WeekDay, IUpdateMenu } from '@/app/types/menu';
+import Link from 'next/link';
 
 // Esquema de validación con Zod actualizado para usar menuItems
 const menuSchema = z.object({
@@ -331,19 +332,149 @@ const MenuManagement: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {mondayDish && mondayDish.dish ? mondayDish.dish.title : mondayDish ? `Plato #${mondayDish.dishId}` : '-'}
+                      {mondayDish && mondayDish.dish ? (
+                        <Link 
+                          href={{
+                            pathname: '/dashboard/attendance',
+                            query: { 
+                              menuId: menu.id,
+                              menuItemId: mondayDish.id 
+                            }
+                          }}
+                          className="text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          {mondayDish.dish.title}
+                        </Link>
+                      ) : mondayDish ? (
+                        <Link 
+                          href={{
+                            pathname: '/dashboard/attendance',
+                            query: { 
+                              menuId: menu.id,
+                              menuItemId: mondayDish.id 
+                            }
+                          }}
+                          className="text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          Plato #{mondayDish.dishId}
+                        </Link>
+                      ) : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {tuesdayDish && tuesdayDish.dish ? tuesdayDish.dish.title : tuesdayDish ? `Plato #${tuesdayDish.dishId}` : '-'}
+                      {tuesdayDish && tuesdayDish.dish ? (
+                        <Link 
+                          href={{
+                            pathname: '/dashboard/attendance',
+                            query: { 
+                              menuId: menu.id,
+                              menuItemId: tuesdayDish.id 
+                            }
+                          }}
+                          className="text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          {tuesdayDish.dish.title}
+                        </Link>
+                      ) : tuesdayDish ? (
+                        <Link 
+                          href={{
+                            pathname: '/dashboard/attendance',
+                            query: { 
+                              menuId: menu.id,
+                              menuItemId: tuesdayDish.id 
+                            }
+                          }}
+                          className="text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          Plato #{tuesdayDish.dishId}
+                        </Link>
+                      ) : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {wednesdayDish && wednesdayDish.dish ? wednesdayDish.dish.title : wednesdayDish ? `Plato #${wednesdayDish.dishId}` : '-'}
+                      {wednesdayDish && wednesdayDish.dish ? (
+                        <Link 
+                          href={{
+                            pathname: '/dashboard/attendance',
+                            query: { 
+                              menuId: menu.id,
+                              menuItemId: wednesdayDish.id 
+                            }
+                          }}
+                          className="text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          {wednesdayDish.dish.title}
+                        </Link>
+                      ) : wednesdayDish ? (
+                        <Link 
+                          href={{
+                            pathname: '/dashboard/attendance',
+                            query: { 
+                              menuId: menu.id,
+                              menuItemId: wednesdayDish.id 
+                            }
+                          }}
+                          className="text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          Plato #{wednesdayDish.dishId}
+                        </Link>
+                      ) : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {thursdayDish && thursdayDish.dish ? thursdayDish.dish.title : thursdayDish ? `Plato #${thursdayDish.dishId}` : '-'}
+                      {thursdayDish && thursdayDish.dish ? (
+                        <Link 
+                          href={{
+                            pathname: '/dashboard/attendance',
+                            query: { 
+                              menuId: menu.id,
+                              menuItemId: thursdayDish.id 
+                            }
+                          }}
+                          className="text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          {thursdayDish.dish.title}
+                        </Link>
+                      ) : thursdayDish ? (
+                        <Link 
+                          href={{
+                            pathname: '/dashboard/attendance',
+                            query: { 
+                              menuId: menu.id,
+                              menuItemId: thursdayDish.id 
+                            }
+                          }}
+                          className="text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          Plato #{thursdayDish.dishId}
+                        </Link>
+                      ) : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {fridayDish && fridayDish.dish ? fridayDish.dish.title : fridayDish ? `Plato #${fridayDish.dishId}` : '-'}
+                      {fridayDish && fridayDish.dish ? (
+                        <Link 
+                          href={{
+                            pathname: '/dashboard/attendance',
+                            query: { 
+                              menuId: menu.id,
+                              menuItemId: fridayDish.id 
+                            }
+                          }}
+                          className="text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          {fridayDish.dish.title}
+                        </Link>
+                      ) : fridayDish ? (
+                        <Link 
+                          href={{
+                            pathname: '/dashboard/attendance',
+                            query: { 
+                              menuId: menu.id,
+                              menuItemId: fridayDish.id 
+                            }
+                          }}
+                          className="text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          Plato #{fridayDish.dishId}
+                        </Link>
+                      ) : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <button 
@@ -611,7 +742,8 @@ const MenuManagement: React.FC = () => {
             >
               {loading ? (
                 <div className="flex items-center">
-                  <Spinner size="sm" className="mr-2" /> {isEditing ? 'Actualizando...' : 'Creando...'}
+                  <Spinner />
+                  {isEditing ? 'Actualizando...' : 'Creando...'}
                 </div>
               ) : (
                 isEditing ? 'Actualizar Menú' : 'Crear Menú'
@@ -644,7 +776,8 @@ const MenuManagement: React.FC = () => {
             >
               {loading ? (
                 <div className="flex items-center">
-                  <Spinner size="sm" className="mr-2" /> Eliminando...
+                  <Spinner />
+                  Eliminando...
                 </div>
               ) : (
                 'Eliminar'

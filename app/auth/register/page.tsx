@@ -171,7 +171,7 @@ export default function RegisterPage() {
     const isSuccess = modalState?.alertType === AlertType.SUCCESS;
     setModalState(null);
     if (isSuccess) {
-      router.push('/pages/auth/login');
+      router.push('/auth/login');
     }
   };
 
@@ -364,7 +364,7 @@ export default function RegisterPage() {
             <button
               type="button"
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              onClick={() => router.push('/pages/auth/login')}
+              onClick={() => router.push('/auth/login')}
             >
               Cancelar
             </button>

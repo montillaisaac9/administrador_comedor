@@ -37,7 +37,7 @@ export default function Sidebar({ links, isOpen, setIsOpen, onSelectLink }: Side
   // Función para cerrar sesión
   const handleLogout = () => {
     logout();
-    router.push('/pages/auth/login');
+    router.push('/auth/login');
   };
 
   return (

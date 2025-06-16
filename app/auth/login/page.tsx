@@ -55,7 +55,7 @@ export default function LoginPage() {
         // Guarda toda la información del usuario en el store
         setUser(response.data);
         // Navega a la página de estadísticas del dashboard
-        router.push('/pages/dashboard/statistics');
+        router.push('/dashboard/statistics');
       } else {
         alert(`Error de autenticación: ${response.error?.message || 'Error desconocido'}`);
       }
@@ -124,7 +124,7 @@ export default function LoginPage() {
             )}
             <div className="mt-2 text-right">
               <Link
-                href="/pages/auth/reset_passwrod"
+                href="/auth/reset_password"
                 className="text-sm text-blue-600 hover:underline"
               >
                 ¿Olvidaste tu contraseña?
@@ -149,7 +149,7 @@ export default function LoginPage() {
           </div>
           <div className="text-center">
             <Link
-              href="/pages/auth/register"
+              href="/auth/register"
               className="text-sm text-blue-600 hover:underline"
             >
               ¿No tienes cuenta? Regístrate aquí

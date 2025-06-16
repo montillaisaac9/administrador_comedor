@@ -14,12 +14,11 @@ import {
 import Sidebar from "@/app/components/sidebar";
 
 const initialLinks = [
-    { name: "Estadísticas", href: "/pages/dashboard/statistics", icon: <BarChart4 />, select: true },
-    { name: "Asistencias", href: "/pages/dashboard/assistances", icon: <CheckCircle2 />, select: false },
-    { name: "Menús", href: "/pages/dashboard/menus", icon: <Utensils />, select: false },
-    { name: "Platos", href: "/pages/dashboard/dishes", icon: <Pizza />, select: false },
-    { name: "Carreras Universitarias", href: "/pages/dashboard/careers", icon: <GraduationCap />, select: false },
-    { name: "Feedback", href: "/pages/dashboard/feedback", icon: <MessageSquareMore />, select: false },
+    { name: "Estadísticas", href: "/dashboard/statistics", icon: <BarChart4 />, select: true },
+    { name: "Menús", href: "/dashboard/menus", icon: <Utensils />, select: false },
+    { name: "Platos", href: "/dashboard/dishes", icon: <Pizza />, select: false },
+    { name: "Carreras Universitarias", href: "/dashboard/careers", icon: <GraduationCap />, select: false },
+    { name: "Feedback", href: "/dashboard/feedback", icon: <MessageSquareMore />, select: false },
   ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
