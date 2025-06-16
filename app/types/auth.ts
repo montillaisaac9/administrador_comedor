@@ -8,7 +8,7 @@ export interface ILoginParams {
     email: string
     name: string
     identification: string
-    role: string
+    role: Role
     securityWord: string
     position?: string
     isActive: boolean

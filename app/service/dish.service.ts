@@ -3,6 +3,8 @@
 import api from '@/app/lib/axios';
 import type { IResponse } from '@/app/types/response';
 import { CreateDishDto, DishDto, UpdateDishDto } from '../types/dish';
+import { Rating, Comment } from '../types/feedback';
+import type { DishRatingStats } from '../types/attendance';
 
 // 1. Crear Plato (POST /dish)
 // Función para crear un plato utilizando multipart/form-data
@@ -99,7 +101,60 @@ export const updateDish = async (
   return response.data;
 };
 
+
+
 export const DeleteDish = async (id: number): Promise<IResponse<string>> => {
   const response = await api.delete<IResponse<string>>(`/dish/${id}`);
   return response.data;
 }
+
+export const getComments = async (
+  id: number,
+  params?: { offset?: number; limit?: number } // Parámetros opcionales con valores por defecto en el backend
+): Promise<IResponse<{
+  offset: number;
+  limit: number;
+  arrayList: Comment[];
+  total: number;
+}>> => {
+  const response = await api.post<
+    IResponse<{
+      offset: number;
+      limit: number;
+      arrayList: Comment[];
+      total: number;
+    }>
+  >(`/comment/dish/${id}`, params);
+  console.log(response.data)
+  return response.data;
+};
+
+
+export const getRating = async (
+  id: number,
+  params?: { offset?: number; limit?: number } // Parámetros opcionales con valores por defecto en el backend
+): Promise<IResponse<{
+  offset: number;
+  limit: number;
+  arrayList: Rating[];
+  total: number;
+}>> => {
+  const response = await api.post<
+    IResponse<{
+      offset: number;
+      limit: number;
+      arrayList: Rating[];
+      total: number;
+    }>
+  >(`/dish-ratting/${id}`, params);
+  console.log(response.data)
+  return response.data;
+};
+
+
+export const getTottalRating = async (
+  id: number
+): Promise<IResponse<DishRatingStats>> => {
+  const response = await api.post<IResponse<DishRatingStats>>(`/dish-ratting/total/${id}`);
+  return response.data;
+};

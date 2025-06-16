@@ -27,3 +27,10 @@ export const getAttendancesByMenu = async (
   console.log(response.data);
   return response.data;
 };
+
+export const getAllTotalAttendance = async (
+  id: number
+): Promise<IResponse<Array<IAttendance>>> => {
+  const response = await api.get<IResponse<Array<IAttendance>>>(`/attendance/menu/${id}`);
+  return response.data;
+};

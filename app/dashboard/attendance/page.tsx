@@ -5,6 +5,14 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Search, Calendar, Download, ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+
+declare module 'jspdf' {
+  interface jsPDF {
+    autoTable: (options: any) => jsPDF;
+  }
+}
 import { getAttendancesByMenu } from '@/app/service/attendance.service';
 import type { IAttendance, IMenuItemAttendance } from '@/app/types/attendance';
 
@@ -116,10 +124,92 @@ export default function AttendancePage() {
     setOffset(newOffset);
   };
 
-  // Exportar a CSV
-  const handleExport = () => {
-    // Implementar lógica de exportación
-    console.log('Exporting to CSV...');
+  // Exportar a PDF
+  const handleExport = async () => {
+    try {
+      // Crear un nuevo documento PDF
+      const doc = new jsPDF('landscape');
+      
+      // Título del documento
+      const title = `Reporte de Asistencias - ${currentMenuItem ? formatDate(currentMenuItem.date) : format(new Date(), 'PPP', { locale: es })}`;
+      
+      // Configuración del encabezado
+      doc.setFontSize(18);
+      doc.text(title, 14, 22);
+      
+      // Subtítulo con filtros aplicados
+      let subtitle = 'Todos los registros';
+      if (searchTerm || dateFilter) {
+        const filters = [];
+        if (searchTerm) filters.push(`Búsqueda: "${searchTerm}"`);
+        if (dateFilter) filters.push(`Fecha: ${format(dateFilter, 'PPP', { locale: es })}`);
+        subtitle = `Filtros aplicados: ${filters.join(', ')}`;
+      }
+      
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text(subtitle, 14, 30);
+      
+      // Preparar datos para la tabla
+      const tableColumn = ['Usuario', 'Cédula', 'Plato', 'Fecha', 'Hora'];
+      const tableRows: string[][] = [];
+      
+      // Procesar datos de asistencias
+      attendances.forEach(attendance => {
+        const attendanceData = [
+          attendance.user.name,
+          attendance.user.identification,
+          attendance.menuItem.dish.title,
+          formatDate(attendance.menuItem.date),
+          format(new Date(attendance.createdAt), 'HH:mm')
+        ];
+        tableRows.push(attendanceData);
+      });
+      
+      // Agregar la tabla al documento
+      (doc as any).autoTable({
+        head: [tableColumn],
+        body: tableRows,
+        startY: 40,
+        styles: {
+          fontSize: 8,
+          cellPadding: 2,
+          overflow: 'linebreak',
+          valign: 'middle',
+          halign: 'left',
+        },
+        headStyles: {
+          fillColor: [41, 128, 185],
+          textColor: 255,
+          fontStyle: 'bold',
+        },
+        alternateRowStyles: {
+          fillColor: [245, 245, 245]
+        },
+        margin: { top: 10 }
+      });
+      
+      // Pie de página con información de generación
+      const pageCount = (doc as any).internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text(
+          `Página ${i} de ${pageCount} | Generado el ${format(new Date(), 'PPPp', { locale: es })}`,
+          doc.internal.pageSize.width - 15,
+          doc.internal.pageSize.height - 10,
+          { align: 'right' }
+        );
+      }
+      
+      // Guardar el PDF
+      doc.save(`reporte-asistencias-${format(new Date(), 'yyyy-MM-dd-HHmmss')}.pdf`);
+      
+    } catch (error) {
+      console.error('Error al generar el PDF:', error);
+      setError('Error al generar el reporte PDF');
+    }
   };
 
   // Volver atrás

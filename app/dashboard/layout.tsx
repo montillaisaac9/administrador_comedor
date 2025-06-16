@@ -3,11 +3,10 @@
 import { useState } from "react";
 import {
     BarChart4,
-    CheckCircle2,
     Utensils,
     Pizza,
     GraduationCap,
-    MessageSquareMore
+    User
   } from "lucide-react";
   
   
@@ -17,8 +16,8 @@ const initialLinks = [
     { name: "Estadísticas", href: "/dashboard/statistics", icon: <BarChart4 />, select: true },
     { name: "Menús", href: "/dashboard/menus", icon: <Utensils />, select: false },
     { name: "Platos", href: "/dashboard/dishes", icon: <Pizza />, select: false },
-    { name: "Carreras Universitarias", href: "/dashboard/careers", icon: <GraduationCap />, select: false },
-    { name: "Feedback", href: "/dashboard/feedback", icon: <MessageSquareMore />, select: false },
+    { name: "Carreras Universitarias", href: "/dashboard/carriers", icon: <GraduationCap />, select: false },
+    { name: "Usuarios", href: "/dashboard/users", icon: <User />, select: false },
   ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

@@ -1,4 +1,3 @@
-import { IResponse } from './response';
 
 export interface IUserAttendance {
   id: number;
@@ -25,9 +24,7 @@ export interface IAttendance {
   menuItem: IMenuItemAttendance;
 }
 
-export interface IAttendanceResponse extends IResponse<IAttendance[]> {}
-
-export interface IAttendanceParams {
-  offset?: number;
-  limit?: number;
+export interface DishRatingStats {
+  totalVotes: number;
+  averageRating: number;
 }

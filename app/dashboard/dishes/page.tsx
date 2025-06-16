@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -25,6 +26,7 @@ const dishSchema = z.object({
 type DishFormData = z.infer<typeof dishSchema>;
 
 const DishClient: React.FC = () => {
+  const router = useRouter();
   // Estados para gestionar los platos
   const [dishes, setDishes] = useState<DishDto[]>([]);
   const [totalDishes, setTotalDishes] = useState<number>(0);
@@ -676,6 +678,12 @@ const DishClient: React.FC = () => {
                           className="text-blue-600 hover:text-blue-900 mr-3"
                         >
                           Editar
+                        </button>
+                        <button 
+                          onClick={() => router.push(`/dashboard/dish?id=${dish.id}`)}
+                          className="text-green-600 hover:text-green-900 mr-3"
+                        >
+                          Ver Detalles
                         </button>
                         <button 
                           onClick={() => {
