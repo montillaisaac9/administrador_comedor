@@ -5,16 +5,12 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Search, Calendar, Download, ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-react';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';  
 
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-  }
-}
 import { getAttendancesByMenu } from '@/app/service/attendance.service';
 import type { IAttendance, IMenuItemAttendance } from '@/app/types/attendance';
+import { exportAttendanceToPDF } from './components/pdf';
 
 export default function AttendancePage() {
   const router = useRouter();
@@ -124,93 +120,19 @@ export default function AttendancePage() {
     setOffset(newOffset);
   };
 
-  // Exportar a PDF
-  const handleExport = async () => {
-    try {
-      // Crear un nuevo documento PDF
-      const doc = new jsPDF('landscape');
-      
-      // Título del documento
-      const title = `Reporte de Asistencias - ${currentMenuItem ? formatDate(currentMenuItem.date) : format(new Date(), 'PPP', { locale: es })}`;
-      
-      // Configuración del encabezado
-      doc.setFontSize(18);
-      doc.text(title, 14, 22);
-      
-      // Subtítulo con filtros aplicados
-      let subtitle = 'Todos los registros';
-      if (searchTerm || dateFilter) {
-        const filters = [];
-        if (searchTerm) filters.push(`Búsqueda: "${searchTerm}"`);
-        if (dateFilter) filters.push(`Fecha: ${format(dateFilter, 'PPP', { locale: es })}`);
-        subtitle = `Filtros aplicados: ${filters.join(', ')}`;
-      }
-      
-      doc.setFontSize(10);
-      doc.setTextColor(100);
-      doc.text(subtitle, 14, 30);
-      
-      // Preparar datos para la tabla
-      const tableColumn = ['Usuario', 'Cédula', 'Plato', 'Fecha', 'Hora'];
-      const tableRows: string[][] = [];
-      
-      // Procesar datos de asistencias
-      attendances.forEach(attendance => {
-        const attendanceData = [
-          attendance.user.name,
-          attendance.user.identification,
-          attendance.menuItem.dish.title,
-          formatDate(attendance.menuItem.date),
-          format(new Date(attendance.createdAt), 'HH:mm')
-        ];
-        tableRows.push(attendanceData);
-      });
-      
-      // Agregar la tabla al documento
-      (doc as any).autoTable({
-        head: [tableColumn],
-        body: tableRows,
-        startY: 40,
-        styles: {
-          fontSize: 8,
-          cellPadding: 2,
-          overflow: 'linebreak',
-          valign: 'middle',
-          halign: 'left',
-        },
-        headStyles: {
-          fillColor: [41, 128, 185],
-          textColor: 255,
-          fontStyle: 'bold',
-        },
-        alternateRowStyles: {
-          fillColor: [245, 245, 245]
-        },
-        margin: { top: 10 }
-      });
-      
-      // Pie de página con información de generación
-      const pageCount = (doc as any).internal.getNumberOfPages();
-      for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        doc.setFontSize(8);
-        doc.setTextColor(150);
-        doc.text(
-          `Página ${i} de ${pageCount} | Generado el ${format(new Date(), 'PPPp', { locale: es })}`,
-          doc.internal.pageSize.width - 15,
-          doc.internal.pageSize.height - 10,
-          { align: 'right' }
-        );
-      }
-      
-      // Guardar el PDF
-      doc.save(`reporte-asistencias-${format(new Date(), 'yyyy-MM-dd-HHmmss')}.pdf`);
-      
-    } catch (error) {
-      console.error('Error al generar el PDF:', error);
-      setError('Error al generar el reporte PDF');
-    }
-  };
+  const handleExportPDF = () => {
+  if (!attendances.length) {
+    setError('No hay datos de asistencia para exportar');
+    return;
+  }
+
+  exportAttendanceToPDF({
+    title: 'Lista de Asistencia',
+    date: currentMenuItem?.date || new Date().toLocaleDateString('es-ES'),
+    dishName: currentMenuItem?.dish?.title,
+    attendances: attendances,
+  });
+};
 
   // Volver atrás
   const handleGoBack = () => {
@@ -273,7 +195,7 @@ export default function AttendancePage() {
         <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
           <button
             type="button"
-            onClick={handleExport}
+            onClick={handleExportPDF}
             className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             <Download className="mr-2 h-4 w-4" />
@@ -428,4 +350,8 @@ export default function AttendancePage() {
       </div>
     </div>
   );
+}
+
+function loadJsPdf(): { jsPDF: any; autoTable: any; } | PromiseLike<{ jsPDF: any; autoTable: any; }> {
+  throw new Error('Function not implemented.');
 }

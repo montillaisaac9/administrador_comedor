@@ -22,7 +22,7 @@ export const getAttendancesByMenu = async (
     limit: number;
     arrayList: IAttendance[];
     total: number;
-  }>>(`/attendance/menu/${menuId}`, params);
+  }>>(`/attendance/menu-item/${menuId}`, params);
   
   console.log(response.data);
   return response.data;
@@ -31,6 +31,6 @@ export const getAttendancesByMenu = async (
 export const getAllTotalAttendance = async (
   id: number
 ): Promise<IResponse<Array<IAttendance>>> => {
-  const response = await api.get<IResponse<Array<IAttendance>>>(`/attendance/menu/${id}`);
+  const response = await api.get<IResponse<Array<IAttendance>>>(`/attendance/total/${id}`);
   return response.data;
 };

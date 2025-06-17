@@ -1,5 +1,6 @@
 
 export interface IUserAttendance {
+  lastName: string;
   id: number;
   name: string;
   identification: string;
@@ -18,6 +19,8 @@ export interface IMenuItemAttendance {
 }
 
 export interface IAttendance {
+  attended: any;
+  attendedAt: string;
   id: number;
   createdAt: string;
   user: IUserAttendance;
