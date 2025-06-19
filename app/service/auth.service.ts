@@ -1,5 +1,5 @@
 import api from '@/app/lib/axios'
-import type { ICarrier, ILoginParams, IRegisterParams, IUser } from '@/app/types/auth'
+import type { ISelect, ILoginParams, IRegisterParams, IUser } from '@/app/types/auth'
 import type { IResponse } from '@/app/types/response'
 
 export const login = async (params: ILoginParams): Promise<IResponse<IUser>> => {
@@ -7,10 +7,10 @@ export const login = async (params: ILoginParams): Promise<IResponse<IUser>> => 
   return response.data
 }
 
-export const getCarriers = async (): Promise<ICarrier[]> => {
+export const getCarriers = async (): Promise<ISelect[]> => {
     const response = await api.get<{
       success: boolean;
-      data: ICarrier[];
+      data: ISelect[];
       error: null;
     }>('/carriers/active');
   
@@ -44,7 +44,6 @@ export const getCarriers = async (): Promise<ICarrier[]> => {
     if (params.isActive !== undefined && params.isActive !== null) {
       formData.append('isActive', params.isActive.toString());
     }
-
   
     const response = await api.post<IResponse<string>>(
       '/authentication/register',
@@ -58,5 +57,20 @@ export const getCarriers = async (): Promise<ICarrier[]> => {
   
     return response.data;
   };
-  
+
+  export interface IChangePasswordParams {
+    email: string;
+    securityWord: string;
+    newPassword: string;
+  }
+
+  export const changePassword = async (params: IChangePasswordParams): Promise<IResponse<string>> => {
+    const response = await api.post<IResponse<string>>('/authentication/changePassword', {
+      email: params.email,
+      securityWord: params.securityWord,
+      newPassword: params.newPassword
+    });
+    
+    return response.data;
+  };
   

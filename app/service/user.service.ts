@@ -1,7 +1,7 @@
 import api from '@/app/lib/axios';
 import type { IResponse } from '@/app/types/response';
 import type { CreateUserDto, UpdateUserDto, UserRole } from '@/app/types/user';
-import { IUser } from '@/app/types/auth';
+import { ISelect, IUser } from '@/app/types/auth';
 
 interface UserListResponse {
   offset: number;
@@ -13,6 +13,18 @@ interface UserListResponse {
 /**
  * Service for handling user-related operations
  */
+
+export const getUser = async (): Promise<ISelect[]> => {
+  const response = await api.get<{
+    success: boolean;
+    data: ISelect[];
+    error: null;
+  }>('/users/active');
+
+  return response.data.data;
+};
+
+
 export const userService = {
   /**
    * Get all users with pagination
@@ -108,6 +120,7 @@ export const userService = {
     const response = await api.patch<IResponse<IUser>>(`/users/${id}/deactivate`);
     return response.data;
   },
+  
 
   /**
    * Reactivate a user

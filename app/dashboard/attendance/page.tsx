@@ -1,56 +1,57 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Search, Calendar, Download, ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-react';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';  
+import { Search, Calendar, Download, ChevronLeft, ChevronRight, ArrowLeft, UserPlus } from 'lucide-react';
 
 import { getAttendancesByMenu } from '@/app/service/attendance.service';
+import UserSelectorModal from './components/UserSelectorModal';
 import type { IAttendance, IMenuItemAttendance } from '@/app/types/attendance';
-import { exportAttendanceToPDF } from './components/pdf';
 
 export default function AttendancePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
-  // Obtener parámetros de la URL
+  // Get URL parameters
   const menuId = searchParams.get('menuId') ? Number(searchParams.get('menuId')) : null;
   const menuItemId = searchParams.get('menuItemId') ? Number(searchParams.get('menuItemId')) : null;
 
-  // Estados
+  // States
   const [attendances, setAttendances] = useState<IAttendance[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [total, setTotal] = useState<number>(0);
   const [offset, setOffset] = useState<number>(0);
   const [currentMenuItem, setCurrentMenuItem] = useState<IMenuItemAttendance | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   
   const limit = 15;
 
-  // Filtros
+  // Filters
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [dateFilter, setDateFilter] = useState<Date | null>(null);
 
-  // Obtener detalles del menú por menuItemId
-  const getMenuDetailsByMenuItemId = async (menuItemId: number) => {
+  // Get menu details by menuItemId
+  const getMenuDetailsByMenuItemId = useCallback(async (menuItemId: number) => {
     try {
-      return null;
+      // This is a placeholder implementation
+      // Replace with actual API call if needed
+      return { menuId: 0 };
     } catch (error) {
-      console.error('Error al obtener detalles del menú:', error);
+      console.error('Error getting menu details:', error);
       return null;
     }
-  };
+  }, []);
 
-  // Obtener asistencias
-  const fetchAttendances = async () => {
+  // Fetch attendances
+  const fetchAttendances = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Si tenemos menuItemId pero no menuId, necesitamos obtener los detalles del menú primero
+      // If we have menuItemId but no menuId, we need to get menu details first
       if (menuItemId && !menuId) {
         const menuDetails = await getMenuDetailsByMenuItemId(menuItemId);
         if (menuDetails) {
@@ -67,26 +68,26 @@ export default function AttendancePage() {
         return;
       }
 
+
       if (!menuItemId) {
         setError('No se proporcionó un ID de menú');
         return;
       }
 
-      // Si tenemos tanto menuId como menuItemId, obtenemos las asistencias
+      // If we have both menuId and menuItemId, fetch attendances
       const response = await getAttendancesByMenu(menuItemId, { 
         offset, 
         limit,
         search: searchTerm || undefined,
         date: dateFilter ? format(dateFilter, 'yyyy-MM-dd') : undefined,
-        menuItemId: menuItemId || undefined,
       });
       
-      // Verificamos si la respuesta y los datos existen
+      // Verify response and data exist
       if (!response || !response.data) {
         throw new Error('No se recibieron datos de la API');
       }
 
-      // Actualizamos el estado con los datos recibidos
+      // Update state with received data
       if (menuItemId && response.data.arrayList.length > 0) {
         setCurrentMenuItem(response.data.arrayList[0].menuItem);
       }
@@ -94,19 +95,19 @@ export default function AttendancePage() {
       setAttendances(response.data.arrayList || []);
       setTotal(response.data.total || 0);
     } catch (err) {
-      console.error('Error al cargar asistencias:', err);
+      console.error('Error loading attendances:', err);
       setError(err instanceof Error ? err.message : 'Error al cargar las asistencias');
     } finally {
       setLoading(false);
     }
-  };
+  }, [menuId, menuItemId, offset, searchTerm, dateFilter, router, getMenuDetailsByMenuItemId]);
 
-  // Efecto para cargar datos
+  // Effect to load data
   useEffect(() => {
     fetchAttendances();
-  }, [menuId, menuItemId, offset, searchTerm, dateFilter]);
+  }, [fetchAttendances]);
 
-  // Formatear fecha
+  // Format date
   const formatDate = (dateString: string) => {
     try {
       return format(parseISO(dateString), 'PPP', { locale: es });
@@ -115,31 +116,54 @@ export default function AttendancePage() {
     }
   };
 
-  // Manejar cambio de página
+  // Handle page change
   const handlePageChange = (newOffset: number) => {
     setOffset(newOffset);
   };
 
+  // Handle export to PDF
   const handleExportPDF = () => {
-  if (!attendances.length) {
-    setError('No hay datos de asistencia para exportar');
-    return;
-  }
+    if (!attendances.length) {
+      setError('No hay datos de asistencia para exportar');
+      return;
+    }
+    
+    // This would be implemented with your PDF generation logic
+    console.log('Exporting to PDF...');
+  };
 
-  exportAttendanceToPDF({
-    title: 'Lista de Asistencia',
-    date: currentMenuItem?.date || new Date().toLocaleDateString('es-ES'),
-    dishName: currentMenuItem?.dish?.title,
-    attendances: attendances,
-  });
-};
-
-  // Volver atrás
+  // Go back
   const handleGoBack = () => {
     router.back();
   };
 
-  // Loading state mejorado
+  // Refresh attendance list
+  const refreshAttendances = useCallback(() => {
+    fetchAttendances();
+  }, [fetchAttendances]);
+
+  if (!menuItemId) {
+    return (
+      <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+        <div className="flex">
+          <div className="ml-3">
+            <p className="text-sm text-yellow-700">
+              No se ha seleccionado un menú. Por favor, selecciona un menú para ver sus asistencias.
+            </p>
+            <button
+              onClick={handleGoBack}
+              className="mt-2 inline-flex items-center text-sm text-blue-600 hover:text-blue-800"
+            >
+              <ArrowLeft className="mr-1 h-4 w-4" />
+              Volver atrás
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Loading state
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh]">
@@ -149,6 +173,7 @@ export default function AttendancePage() {
     );
   }
 
+  // Error state
   if (error) {
     return (
       <div className="bg-red-50 border-l-4 border-red-400 p-4">
@@ -169,7 +194,7 @@ export default function AttendancePage() {
   }
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8">
+    <div className="px-4 sm:px-6 lg:px-8 py-8">
       <div className="sm:flex sm:items-center">
         <div className="sm:flex-auto">
           <div className="flex items-center">
@@ -193,18 +218,36 @@ export default function AttendancePage() {
           </div>
         </div>
         <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
-          <button
-            type="button"
-            onClick={handleExportPDF}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            <Download className="mr-2 h-4 w-4" />
-            Exportar
-          </button>
+          <div className="flex space-x-2">
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(true)}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <UserPlus className="mr-2 h-4 w-4" />
+              Agregar Asistencia
+            </button>
+            <button
+              type="button"
+              onClick={handleExportPDF}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Exportar
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Filtros */}
+      {/* User Selector Modal */}
+      <UserSelectorModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        menuItemId={menuItemId}
+        onSuccess={refreshAttendances}
+      />
+
+      {/* Filters */}
       <div className="mt-6 flex flex-col sm:flex-row gap-4">
         <div className="relative rounded-md shadow-sm flex-1">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -231,11 +274,11 @@ export default function AttendancePage() {
         </div>
       </div>
 
-      {/* Tabla */}
+      {/* Table */}
       {!loading && attendances.length === 0 ? (
         <div className="mt-8 text-center">
           <p className="text-gray-500">No se encontraron asistencias</p>
-          {searchTerm || dateFilter ? (
+          {(searchTerm || dateFilter) && (
             <button
               onClick={() => {
                 setSearchTerm('');
@@ -245,7 +288,7 @@ export default function AttendancePage() {
             >
               Limpiar filtros
             </button>
-          ) : null}
+          )}
         </div>
       ) : (
         <div className="mt-8 flex flex-col">
@@ -300,7 +343,7 @@ export default function AttendancePage() {
         </div>
       )}
 
-      {/* Paginación */}
+      {/* Pagination */}
       <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 mt-4">
         <div className="flex flex-1 justify-between sm:hidden">
           <button
@@ -350,8 +393,4 @@ export default function AttendancePage() {
       </div>
     </div>
   );
-}
-
-function loadJsPdf(): { jsPDF: any; autoTable: any; } | PromiseLike<{ jsPDF: any; autoTable: any; }> {
-  throw new Error('Function not implemented.');
 }

@@ -9,7 +9,7 @@ import { getCarriers, registerUser } from '@/app/service/auth.service'; // Impor
 import SuccessModal, { AlertType } from '@/app/components/SuccessModal';
 import type { IResponse } from '@/app/types/response';
 import type { IRegisterParams } from '@/app/types/auth';
-import type { ICarrier } from '@/app/types/auth'; // Asumimos que existe este tipo
+import type { ISelect } from '@/app/types/auth'; // Asumimos que existe este tipo
 
 // Define schema for form validation, agregando "securityWord", "cedula" y "careerIds"
 const registrationSchema = z
@@ -51,7 +51,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [modalState, setModalState] = useState<ModalState | null>(null);
-  const [carriers, setCarriers] = useState<ICarrier[]>([]);
+  const [carriers, setCarriers] = useState<ISelect[]>([]);
   const [careerSelectors, setCareerSelectors] = useState<number[]>([0]); // Comenzamos con un selector
   const [isLoading, setIsLoading] = useState(true);
   

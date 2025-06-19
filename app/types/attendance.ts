@@ -31,3 +31,8 @@ export interface DishRatingStats {
   totalVotes: number;
   averageRating: number;
 }
+
+export interface CreateAttendance {
+  userId: number;
+  menuItemId: number;
+}

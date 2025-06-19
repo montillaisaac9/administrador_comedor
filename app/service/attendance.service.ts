@@ -1,6 +1,6 @@
 import api from '@/app/lib/axios';
 import type { IResponse } from '@/app/types/response';
-import { IAttendance } from '../types/attendance';
+import { CreateAttendance, IAttendance } from '../types/attendance';
 
 export const getAttendancesByMenu = async (
   menuId: number,
@@ -32,5 +32,10 @@ export const getAllTotalAttendance = async (
   id: number
 ): Promise<IResponse<Array<IAttendance>>> => {
   const response = await api.get<IResponse<Array<IAttendance>>>(`/attendance/total/${id}`);
+  return response.data;
+};
+
+export const createAttendance = async (attendance: CreateAttendance): Promise<IResponse<string>> => {
+  const response = await api.post<IResponse<string>>(`/attendance`, attendance);
   return response.data;
 };

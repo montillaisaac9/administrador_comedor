@@ -34,7 +34,7 @@ export interface IRegisterParams {
   careerIds: number[]; 
 }
 
-export interface ICarrier {
+export interface ISelect {
   id: number;
   name: string;
 }

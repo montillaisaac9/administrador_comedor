@@ -22,7 +22,6 @@ const loginSchema = z.object({
   password: z
     .string()
     .min(1, { message: 'La contraseña es requerida' })
-    .min(6, { message: 'La contraseña debe tener al menos 6 caracteres' }),
 });
 
 // TypeScript type for our form data
@@ -122,13 +121,23 @@ export default function LoginPage() {
             {errors.password && (
               <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
             )}
-            <div className="mt-2 text-right">
-              <Link
-                href="/auth/reset_password"
-                className="text-sm text-blue-600 hover:underline"
-              >
-                ¿Olvidaste tu contraseña?
-              </Link>
+            <div className="mt-2 flex justify-between items-center">
+              <div className="text-sm">
+                <Link
+                  href="/auth/register"
+                  className="text-blue-600 hover:underline"
+                >
+                  ¿No tienes cuenta? Regístrate
+                </Link>
+              </div>
+              <div className="text-sm">
+                <Link
+                  href="/auth/reset-password"
+                  className="text-blue-600 hover:underline"
+                >
+                  ¿Olvidaste tu contraseña?
+                </Link>
+              </div>
             </div>
           </div>
 
@@ -147,14 +156,7 @@ export default function LoginPage() {
               {isSubmitting ? 'Cargando...' : 'Ingresar'}
             </button>
           </div>
-          <div className="text-center">
-            <Link
-              href="/auth/register"
-              className="text-sm text-blue-600 hover:underline"
-            >
-              ¿No tienes cuenta? Regístrate aquí
-            </Link>
-          </div>
+
         </form>
       </div>
     </div>

@@ -3,6 +3,7 @@
 import { JSX } from "react";
 import { ArrowLeft, ArrowRight, LogOutIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import useUserStore from "@/app/stores/useUserStore";
 
 interface SidebarLink {
@@ -10,6 +11,7 @@ interface SidebarLink {
   href: string;
   icon: JSX.Element;
   select: boolean;
+  roles?: string[]; // Optional array of roles that can see this link
 }
 
 interface SidebarProps {
@@ -52,7 +54,20 @@ export default function Sidebar({ links, isOpen, setIsOpen, onSelectLink }: Side
         shadow-lg
       `}
     >
-      {/* Toggleable button */}
+      {/* Logo */}
+      <div className="flex justify-center py-4 px-2 border-b border-gray-800">
+        <div className={`relative ${isOpen ? 'w-32' : 'w-12'} h-12`}>
+          <Image 
+            src="/logo.png" 
+            alt="Logo del sistema" 
+            fill
+            className="object-cover"
+            priority
+          />
+        </div>
+      </div>
+
+      {/* Toggle button */}
       <div className="flex justify-end p-2">
         <button
           onClick={() => setIsOpen(!isOpen)}
@@ -88,7 +103,17 @@ export default function Sidebar({ links, isOpen, setIsOpen, onSelectLink }: Side
       {/* Navigation links */}
       <nav className="flex-1 overflow-y-auto px-3">
         <div className="space-y-2">
-          {links.map((link, index) => (
+          {links
+            // Filter links based on user role
+            .filter(link => {
+              // If no roles are specified, show to all
+              if (!link.roles) return true;
+              // If user is not authenticated, don't show role-restricted links
+              if (!isAuthenticated) return false;
+              // Check if user's role is in the allowed roles
+              return link.roles.includes(user?.role || '');
+            })
+            .map((link, index) => (
             <button
               key={index}
               onClick={() => {
