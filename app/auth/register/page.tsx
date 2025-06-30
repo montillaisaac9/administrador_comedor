@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { getCarriers, registerUser } from '@/app/service/auth.service'; // Importamos el servicio
 import SuccessModal, { AlertType } from '@/app/components/SuccessModal';
 import type { IResponse } from '@/app/types/response';
@@ -178,7 +179,17 @@ export default function RegisterPage() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-blue-50">
       <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md">
-        <div>
+        <div className="flex justify-center mb-4">
+          <Image 
+            src="/logo_n.png" 
+            alt="Logo" 
+            width={80}
+            height={80}
+            className="h-20 w-auto"
+            priority
+          />
+        </div>
+        <div className="text-center">
           <h2 className="text-xl font-bold text-gray-900">Registro de Administrativo</h2>
           <p className="text-sm text-gray-600">
             Crea una nueva cuenta para el sistema del comedor UPEBG

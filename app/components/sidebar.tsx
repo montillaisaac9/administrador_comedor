@@ -1,7 +1,7 @@
 "use client";
 
-import { JSX } from "react";
-import { ArrowLeft, ArrowRight, LogOutIcon } from "lucide-react";
+import { JSX, useState } from "react";
+import { ArrowLeft, ArrowRight, LogOutIcon, X, AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import useUserStore from "@/app/stores/useUserStore";
@@ -24,6 +24,7 @@ interface SidebarProps {
 export default function Sidebar({ links, isOpen, setIsOpen, onSelectLink }: SidebarProps) {
   const router = useRouter();
   const { user, isAuthenticated, logout } = useUserStore();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   // Determinar el color del avatar basado en el rol del usuario
   const getRoleColor = () => {
@@ -36,10 +37,19 @@ export default function Sidebar({ links, isOpen, setIsOpen, onSelectLink }: Side
     }
   };
 
-  // Función para cerrar sesión
+  // Función para manejar el cierre de sesión
   const handleLogout = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const confirmLogout = () => {
     logout();
+    setShowLogoutConfirm(false);
     router.push('/auth/login');
+  };
+
+  const cancelLogout = () => {
+    setShowLogoutConfirm(false);
   };
 
   return (
@@ -155,6 +165,47 @@ export default function Sidebar({ links, isOpen, setIsOpen, onSelectLink }: Side
               Cerrar sesión
             </span>
           </button>
+        </div>
+      )}
+
+      {/* Logout Confirmation Dialog */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 bg-black/80 bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                <AlertTriangle className="h-5 w-5 text-yellow-500 mr-2" />
+                Cerrar sesión
+              </h3>
+              <button 
+                onClick={cancelLogout}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <p className="text-gray-700 mb-6">
+              ¿Estás seguro de que deseas cerrar la sesión?
+            </p>
+            
+            <div className="flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={cancelLogout}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmLogout}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700"
+              >
+                Cerrar sesión
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

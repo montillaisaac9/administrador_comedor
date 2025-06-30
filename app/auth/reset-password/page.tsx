@@ -6,9 +6,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { changePassword } from '@/app/service/auth.service';
-import type { IResponse } from '@/app/types/response';
+
 
 // Define schema for form validation
 const resetPasswordSchema = z.object({
@@ -37,7 +38,7 @@ export default function ResetPasswordPage() {
     securityWord: false
   });
   const [isSuccess, setIsSuccess] = useState(false);
-  const [apiError, setApiError] = useState<string | null>(null);
+  const [apiError, setApiError] = useState<{ message: string; type: 'error' | 'success' } | null>(null);
   const router = useRouter();
 
   const {
@@ -65,9 +66,10 @@ export default function ResetPasswordPage() {
   const onSubmit = async (data: ResetPasswordFormData) => {
     try {
       setApiError(null);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { confirmPassword, ...submitData } = data;
       
-      const response: IResponse<string> = await changePassword(submitData);
+      const response = await changePassword(submitData);
       
       if (response.success) {
         setIsSuccess(true);
@@ -76,11 +78,47 @@ export default function ResetPasswordPage() {
         setTimeout(() => {
           router.push('/auth/login');
         }, 3000);
-      } else {
-        setApiError(response.error?.message || 'Error al restablecer la contraseña');
+      } else if (response.error) {
+        setApiError({
+          message: response.error.message || 'Error al restablecer la contraseña',
+          type: 'error'
+        });
       }
-    } catch (error: any) {
-      setApiError(error.message || 'Ocurrió un error inesperado');
+    } catch (err) {
+      console.error('Error al restablecer la contraseña:', err);
+      
+      // Type guard para manejar errores de Axios
+      interface AxiosErrorResponse {
+        response?: {
+          data?: {
+            error?: {
+              message?: string;
+            };
+          };
+        };
+      }
+      
+      const isAxiosError = (error: unknown): error is AxiosErrorResponse => {
+        return typeof error === 'object' && error !== null && 'response' in error;
+      };
+
+      if (isAxiosError(err)) {
+        const errorMessage = err.response?.data?.error?.message || 'Error al restablecer la contraseña';
+        setApiError({
+          message: errorMessage,
+          type: 'error'
+        });
+      } else if (err instanceof Error) {
+        setApiError({
+          message: err.message || 'Ocurrió un error inesperado',
+          type: 'error'
+        });
+      } else {
+        setApiError({
+          message: 'No se pudo conectar al servidor. Verifica tu conexión e inténtalo de nuevo.',
+          type: 'error'
+        });
+      }
     }
   };
 
@@ -121,6 +159,16 @@ export default function ResetPasswordPage() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
       <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-md">
+        <div className="flex justify-center mb-4">
+          <Image 
+            src="/logo_n.png" 
+            alt="Logo" 
+            width={80}
+            height={80}
+            className="h-20 w-auto"
+            priority
+          />
+        </div>
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900">Restablecer Contraseña</h2>
           <p className="mt-2 text-sm text-gray-600">
@@ -129,8 +177,25 @@ export default function ResetPasswordPage() {
         </div>
 
         {apiError && (
-          <div className="p-4 text-sm text-red-700 bg-red-100 rounded-lg">
-            {apiError}
+          <div className={`p-4 rounded-md ${
+            apiError.type === 'error' ? 'bg-red-50' : 'bg-green-50'
+          }`}>
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className={`h-5 w-5 ${
+                  apiError.type === 'error' ? 'text-red-400' : 'text-green-400'
+                }`} viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className={`text-sm font-medium ${
+                  apiError.type === 'error' ? 'text-red-800' : 'text-green-800'
+                }`}>
+                  {apiError.message}
+                </p>
+              </div>
+            </div>
           </div>
         )}
 

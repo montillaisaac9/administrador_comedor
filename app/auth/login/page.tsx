@@ -1,16 +1,16 @@
 // app/login/page.tsx
 'use client';
 
-import { useState } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { login } from '@/app/service/auth.service';
-import type { IResponse } from '@/app/types/response';
-import type { IUser } from '@/app/types/auth';
+// Error types will be handled with type guards
 import useUserStore from '@/app/stores/useUserStore';
 
 // Define schema for form validation
@@ -29,47 +29,120 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
+  const [apiError, setApiError] = useState<{message: string; type: 'error' | 'success'} | null>(null);
   const router = useRouter();
-
-  // Usa el store para guardar la información completa del usuario
   const setUser = useUserStore((state) => state.setUser);
-  // Si obtienes token en la respuesta, puedes usar setUserAndToken
   
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: '', password: '' },
   });
 
+  // Clear error when form values change
+  useEffect(() => {
+    const subscription = watch(() => {
+      if (apiError) {
+        setApiError(null);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [watch, apiError]);
+
   const togglePasswordVisibility = () => setShowPassword(!showPassword);
 
   const onSubmit = async (data: LoginFormData) => {
+    setApiError(null);
     try {
-      const response: IResponse<IUser> = await login(data);
-      if (response.success && response.data) {
-        alert(`Login exitoso, bienvenido ${response.data.name}`);
-        // Guarda toda la información del usuario en el store
+      const response = await login(data);
+      
+      // Si llegamos aquí, el login fue exitoso
+      if (response.data) {
         setUser(response.data);
-        // Navega a la página de estadísticas del dashboard
         router.push('/dashboard/statistics');
       } else {
-        alert(`Error de autenticación: ${response.error?.message || 'Error desconocido'}`);
+        throw new Error('No se recibieron datos de usuario');
       }
-    } catch (error: unknown) {
-      alert(`Error en la petición: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    } catch (err) {
+      console.error('Error en el inicio de sesión:', err);
+      
+      // Type guard to check if it's an Axios error
+      interface AxiosErrorResponse {
+        response?: {
+          data?: {
+            error?: {
+              message?: string;
+            };
+          };
+        };
+      }
+      
+      const isAxiosError = (error: unknown): error is AxiosErrorResponse => {
+        return typeof error === 'object' && error !== null && 'response' in error;
+      };
+
+      if (isAxiosError(err)) {
+        const errorMessage = err.response?.data?.error?.message || 'Error en la autenticación';
+        setApiError({
+          message: errorMessage,
+          type: 'error'
+        });
+      } else if (err instanceof Error) {
+        setApiError({
+          message: err.message || 'Ocurrió un error inesperado',
+          type: 'error'
+        });
+      } else {
+        setApiError({
+          message: 'No se pudo conectar al servidor. Verifica tu conexión e inténtalo de nuevo.',
+          type: 'error'
+        });
+      }
     }
   };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-md">
+        <div className="flex justify-center mb-4">
+          <Image 
+            src="/logo_n.png" 
+            alt="Logo" 
+            width={80}
+            height={80}
+            className="h-20 w-auto"
+            priority
+          />
+        </div>
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900">Iniciar Sesión</h2>
           <p className="mt-2 text-sm text-gray-600">Accede a tu cuenta para continuar</p>
         </div>
+
+        {apiError && (
+          <div className={`p-4 rounded-md ${
+            apiError.type === 'error' ? 'bg-red-50' : 'bg-green-50'
+          }`}>
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <AlertCircle className={`h-5 w-5 ${
+                  apiError.type === 'error' ? 'text-red-400' : 'text-green-400'
+                }`} aria-hidden="true" />
+              </div>
+              <div className="ml-3">
+                <p className={`text-sm font-medium ${
+                  apiError.type === 'error' ? 'text-red-800' : 'text-green-800'
+                }`}>
+                  {apiError.message}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
           <div>
@@ -102,7 +175,7 @@ export default function LoginPage() {
                 {...register('password')}
                 type={showPassword ? 'text' : 'password'}
                 autoComplete="current-password"
-                className={`w-full px-3 py-2 text-black border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                className={`w-full px-3 py-2 pr-10 text-black border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                   errors.password ? 'border-red-500' : 'border-gray-300'
                 }`}
               />
@@ -141,13 +214,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="flex justify-between">
-            <button
-              type="button"
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              Cancelar
-            </button>
+          <div className="flex justify-center">
             <button
               type="submit"
               disabled={isSubmitting}
